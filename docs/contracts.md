@@ -1,37 +1,36 @@
-# Shared data contracts
+# FA_Agent | Contracts v0.2
 
-All public payloads should be JSON-serializable and versioned. Pydantic classes in `src/fa_agents/models.py` implement the first draft.
+Implemented in src/fa_agents/models.py using Pydantic.
 
-### ResearchRequest
+## ResearchRequest
 
-- `symbol`: security/instrument symbol (uppercase normalized)
-- `asset_class`: equity | etf | crypto | commodity | fx | index | other
-- `exchange`, `instrument_id`: optional identity disambiguators (future asset resolver)
-- `question`, `horizon`: research objective and time horizon
-- `as_of`: point in time to which analysis is bounded; missing means latest available
-- `include_agents` / `exclude_agents`: specialist control
+symbol, asset_class, exchange (optional), instrument_id (optional), question, horizon, as_of, include_agents and exclude_agents.
 
-### Evidence
+asset_class: equity | etf | crypto | commodity | fx | index | other.
 
-- `source_id`, `source_name`, `source_url`
-- `published_at`: publication time, when known
-- `observed_at`: time/period when fact was true
-- `retrieved_at`: time the source was accessed
-- `text_excerpt`: short attributable excerpt; avoid unlicensed copying
+Symbol does not uniquely identify an instrument worldwide; exchange and instrument_id are reserved for disambiguation. Only US SEC ticker lookup exists in the current source provider.
 
-### AgentResult
+## Evidence
 
-- `agent_id` and `status`: completed | partial | no_data | not_implemented | failed
-- `summary`, `claims`, `evidence`, `limitations`
-- Status cannot be `completed` when the underlying specialist did no research.
-- Claims should eventually have typed category and linked evidence ids.
+source_id, source_name, source_url, retrieved_at, published_at, observed_at, text_excerpt, is_synthetic.
 
-### ResearchReport
+- For SEC numerical data, observed_at is the financial period end; published_at is the filing date.
+- News records are RSS headline metadata only.
+- For local CSVs, the source_url is a placeholder and the data source is identified as local/unverified.
+- Demo source records explicitly set is_synthetic=true.
 
-- `request`, `generated_at`, `status`, `results`, `warnings`
-- Initially an *execution status report*. A genuine synthesized investment thesis is **not** implemented.
-- Later: scenarios, thesis, disagreements, invalidation triggers, source index and quality assessment.
+## AgentResult
 
-### Versioning
+agent_id, status, summary, claims, metrics, evidence, limitations.
 
-Introduce `schema_version` before external app integrations. Changes to JSON output must be backwards compatible or versioned. Use common identifiers, asset-class typing and ISO 8601 UTC timestamps.
+status: completed | partial | no_data | not_implemented | failed.
+
+Completed does not mean a buy/sell recommendation. Filings, news, technical and risk agents are partial until their independent methodologies are substantially implemented.
+
+## ResearchReport
+
+schema_version = 0.2; request, generated_at, status, data_mode, planned_agents, results, summary, llm_commentary (optional), warnings.
+
+Report status is coverage-dependent. The optional LLM commentary is not an additional source of verifiable evidence.
+
+Future schemas should introduce explicit metric units, source IDs per financial claim, per-agent version and source snapshots before historical thesis evaluation.

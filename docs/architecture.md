@@ -1,72 +1,46 @@
-# Architecture | FA independent research service
+# FA_Agent | Standalone multi-agent architecture, v0.2
 
-## Boundaries
+## Isolation
 
-FA is a stand-alone application. It MUST NOT import from SysTrd or depend on its schema, folder layout, scheduler, database, authentication or runtime.
-Integration happens later through read-only provider adapters or a documented API. Other consumer applications receive the same service contracts.
-Financial research is **not** trade execution. No broker / exchange order tools should be present here.
+This project is independent of SysTrd and other applications. No imports from them, no required PostgreSQL and no trading or brokerage capabilities. Future external integrations use read-only service/adapter contracts.
 
-## Logical components
+## Current executable pipeline
 
-```text
-CLI / future Web UI / future external apps
-           |
-        Public API (future)
-           |
-    Request validation + Asset resolution
-           |
-    Orchestrator (LangGraph StateGraph)
-           | choose capabilities, control budget, timeouts, retries
-           +---> Filing/SEC ------+
-           +---> Fundamental -----+
-           +---> Valuation -------+
-           +---> Industry --------+
-           +---> Macro -----------+--> Evidence validation --> Challenger/Risk --> Synthesis
-           +---> News/Catalysts --+                             |
-           +---> Technical -------+                       ResearchReport
-           +---> Sentiment -------+
-           +---> Crypto/ETF ------+
-           +---> Backtest --------+
-           |
-     Capability Registry / Ports
-           |
- Online APIs / filings / news | local files | future SysTrd | other apps
-```
+Request -> deterministic Plan -> dynamic Send fan-out (LangGraph specialists)
+-> Validate coverage -> rules-based Risk Review -> JSON report.
 
-A research orchestration graph uses deterministic routing by default. LLMs specialize in interpreting evidence, assessing hypotheses and writing grounded synthesis; they do not directly generate SQL or execute Python.
-A future model-based planner may propose a plan but it must be validated against the registered capability allowlist.
+Specialist workers run independently and share a deterministic, versioned report contract. The Risk Reviewer sees all specialist results before producing coverage warnings. Other specialist-to-specialist delegation is a future capability, not implemented today.
 
-## Internal packages
+## Implemented research capabilities
 
-- `models.py`: versionable request, evidence, agent result and final report schemas.
-- `catalog.py`: available expert identities, asset-class routing rules.
-- `ports.py`: external search, fundamentals, technical data and research storage interfaces.
-- `graph.py`: real LangGraph plan/fan-out/validation/synthesis scaffold.
-- `cli.py`: local usage and smoke-test entry point.
+- Fundamental (US SEC companyfacts 10-K annual XBRL, deterministic ratios).
+- Filings (SEC submissions links and form/date metadata; not document text).
+- News (current Google News RSS headlines; no article full text verification).
+- Technical (user-provided date/close CSV, close and simple moving averages).
+- Risk (coverage checks; independent challenger research is not implemented).
+- LangChain commentary is optional when a user locally sets OPENAI_API_KEY; it only sees collected records and cannot independently fetch sources.
 
-When the first real specialist is implemented, refactor the specialist placeholder into isolated agents and tools under `agents/` and `tools/`; avoid premature nesting.
+Everything else listed in agent_catalog.md remains an explicit not_implemented placeholder.
 
-## Execution and reliability requirements
+## Source and temporal integrity
 
-- Each run has a unique id; explicit asset identity (symbol **plus** optional venue/ISIN/chain/network).
-- Parallel specialists should share **immutable facts**, not overwrite one another's answers.
-- Configure limits for max requests, web calls, model tokens, total cost, elapsed time and follow-up iterations.
-- Distinguish transient failure, missing data, unsupported asset, and unimplemented agent.
-- Checkpoint graph progress separately from durable research history. SQLite locally first if needed; Postgres later.
-- Raw source, extracted fact, analyst interpretation and forward scenario are different record types.
-- Record observation/effective date, publication date, retrieval date and analysis-as-of date. Point-in-time validity is mandatory for historical studies.
-- Capture source URL, publisher and how evidence was used. Never treat generated prose as a primary source.
-- Human review before converting analysis into trading decisions.
+Each Evidence record identifies an external URL or explicitly describes a local input or synthetic fixture. Published, observed and retrieved timestamps are separate. SEC facts are filtered on filed and period-end dates, avoiding simple point-in-time hindsight; historical ticker identity is not yet guaranteed. RSS historical searches are explicitly rejected.
 
-## Integration contract
+All opinions, scores and financial calculations must be traceable. Never mistake a news headline for a verified reported event or a filing URL for a read filing.
 
-Future interfaces (read-only initially):
-- `POST /v1/research`: submit `ResearchRequest`
-- `GET /v1/research/{run_id}`: status and structured `ResearchReport`
-- `GET /v1/capabilities`: registered agent/tool capabilities
+## Extensibility
 
-Those routes are **planned**, not implemented. SysTrd and other applications must call the same versioned interface or supply adapters implementing the ports. No coupling to SysTrd's internal tables in the domain layer.
+- providers.py: SEC, RSS, CSV and offline synthetic fixtures.
+- agents.py: deterministic financial/technical workers and rules-based review.
+- catalog.py: agent identities and selection policy.
+- graph.py: LangGraph lifecycle and injectable Services.
+- models.py: public Pydantic contract.
+- llm.py: optional LangChain narrative layer.
+- cli.py: user-facing command.
+- ports.py: future provider/service protocols (not wired into production yet).
 
-## LLM and models
+Later: proper Security Master, specialized financial agents, actual historical news, quantitative testing, data-source permission boundaries, provider-specific budget controls, persistable checkpoints, independent challenger and versioned REST API. The SysTrd adapter can only supply structured data; it must not alter the FA domain architecture.
 
-LangGraph coordinates graph/state. LangChain provides model and tool integrations when research tools are implemented. Provider and model must be configurable, never hardcoded to one vendor. Do not store API credentials, personal portfolios or private strategies in this public repository.
+## Security
+
+All external research is read-only. API keys and private data remain local. This repository is public. Financial documents or external content are untrusted instructions to any LLM.

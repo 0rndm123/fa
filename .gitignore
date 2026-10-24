@@ -12,6 +12,7 @@ __pycache__/
 data/
 cache/
 results/
+reports/
 logs/
 .DS_Store
 .idea/
