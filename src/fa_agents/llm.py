@@ -5,11 +5,18 @@ import os
 from .models import ResearchReport
 
 
+def resolve_api_key() -> str:
+    """Use the conventional key name first, then the user's existing demo alias."""
+    key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY_Demo")
+    if not key:
+        raise ValueError("Set OPENAI_API_KEY or OPENAI_API_KEY_Demo to use --llm.")
+    return key
+
+
 def explain(report: ResearchReport, model: str | None = None) -> str:
     if report.data_mode == "demo":
         raise ValueError("LLM commentary is disabled for synthetic demo data.")
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("OPENAI_API_KEY is required for --llm.")
+    api_key = resolve_api_key()
     try:
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import SystemMessage, HumanMessage
@@ -37,7 +44,7 @@ def explain(report: ResearchReport, model: str | None = None) -> str:
     )
     message = json.dumps(limited, ensure_ascii=False)[:22000]
     response = ChatOpenAI(model=model or os.getenv("FA_LLM_MODEL", "gpt-4.1-mini"),
-                          temperature=0).invoke([
+                          temperature=0, api_key=api_key).invoke([
         SystemMessage(content=system), HumanMessage(content=message)
     ])
     return str(response.content)

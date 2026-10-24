@@ -75,9 +75,12 @@ To add optional AI-based *commentary* to a live report:
 
 ~~~powershell
 python -m pip install -e ".[ai]"
-$env:OPENAI_API_KEY = "your-key-kept-local"
-fa-agent run --symbol AAPL --asset-class equity --include-agent fundamental --llm --output reports/aapl_ai.json
+# Reads OPENAI_API_KEY_Demo automatically if OPENAI_API_KEY is not defined.
+# Do not display or paste the secret key.
+fa-agent run --symbol NVDA --asset-class equity --include-agent news --llm --output reports/nvda_ai.json
 ~~~
+
+The application prefers OPENAI_API_KEY and falls back to OPENAI_API_KEY_Demo, if present in the current Python process environment. This lets an existing Windows environment variable work without copying or printing the secret. Restart the terminal if the variable was configured after opening the session.
 
 Never commit credentials, private financial data, or reports with proprietary content. This GitHub repo is PUBLIC. Model API usage may incur costs.
 
