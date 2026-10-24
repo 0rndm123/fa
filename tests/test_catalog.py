@@ -18,4 +18,4 @@ def test_routing_filters():
     with pytest.raises(ValueError, match="Unknown agent"):
         choose_agents(ResearchRequest(symbol="A", asset_class="equity",
                                      include_agents=["nonexistent"]))
-    assert len(SPECIALISTS) == 19
+    assert len(SPECIALISTS) == 20

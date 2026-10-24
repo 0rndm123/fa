@@ -1,4 +1,4 @@
-# FA_Agent | Agent and subagent functional registry (v0.6)
+# FA_Agent | Agent and subagent functional registry (v0.7)
 
 Catalogue entries distinguish operational calculation, partial source discovery and planned capabilities.
 
@@ -24,8 +24,9 @@ Catalogue entries distinguish operational calculation, partial source discovery 
 | risk | Risk | Rule-based research coverage review | Partial |
 
 | cot | CFTC Positioning | Weekly futures-only COT analysis by trader category | Working via public CFTC API; contract selection required when ambiguous |
+| crypto_derivatives | Crypto Derivatives | Binance USD-M funding rates, open interest snapshots and long/short account ratios | Working via public Binance Futures endpoints; scope and failures explicit |
 
-## Market data subagents (separate from the 19 research registrations)
+## Market data subagents (separate from the 20 research registrations)
 
 - Yahoo Finance Quote Agent: unofficial chart API, quote, timestamp, hourly OHLC when returned
 - Binance Spot Quote Agent: official public ticker and hourly kline endpoints, read-only
