@@ -54,14 +54,49 @@ class Issuer:
         return f"{self.cik:010d}"
 
 
+def _windows_user_sec_agent() -> str:
+    """Read persisted SEC identification in the current Windows user's registry.
+
+    This doesn't execute a shell command, contact a server, or write credentials.
+    """
+    try:
+        import winreg
+    except ImportError:
+        return ""
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as key:
+            value, _kind = winreg.QueryValueEx(key, "SEC_USER_AGENT")
+    except OSError:
+        return ""
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _valid_sec_agent(value: str) -> bool:
+    import re
+    # This checks the expected syntax, not ownership of the contact address.
+    return bool(value and len(value) >= 8 and
+                re.search(r"\b[^\s@]+@[^\s@]+\.[A-Za-z]{2,}\b", value))
+
+
+def sec_user_agent_config() -> tuple[str, str]:
+    """Return (agent identification, location), never logging the contact."""
+    process_value = os.getenv("SEC_USER_AGENT", "").strip()
+    if _valid_sec_agent(process_value):
+        return process_value, "process"
+    saved_value = _windows_user_sec_agent()
+    if _valid_sec_agent(saved_value):
+        return saved_value, "windows_user"
+    return "", "missing"
+
+
 class SEC:
     """Public SEC XBRL and submissions, cached for the duration of a run."""
 
     def __init__(self, user_agent: str | None = None, loader=None):
-        self.ua = user_agent or os.getenv("SEC_USER_AGENT", "")
+        self.ua = user_agent if user_agent is not None else sec_user_agent_config()[0]
         self.loader = loader
-        if self.loader is None and ("@" not in self.ua or len(self.ua) < 8):
-            raise ProviderError("Set SEC_USER_AGENT to a name and REAL contact email.")
+        if self.loader is None and not _valid_sec_agent(self.ua):
+            raise ProviderError("SEC_USER_AGENT not configured in this process or Windows User settings. Run START_FA.bat after configuring it.")
         self._cache: dict[str, Any] = {}
         self._lock = threading.RLock()
 

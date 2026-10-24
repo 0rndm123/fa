@@ -21,7 +21,7 @@ from .catalog import SPECIALISTS, choose_agents, select_for_question
 from .graph import build_graph
 from .llm import explain
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
-from .providers import ProviderError, prices_from_csv
+from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -89,6 +89,7 @@ def capabilities():
         has_llm = True
     except ValueError:
         has_llm = False
+    _sec_value, sec_source = sec_user_agent_config()
     return {
         "agents": [{"id": key, "description": value,
                     "implementation": ("working" if key in {"financial_data", "fundamental", "financial_performance"} else
@@ -98,7 +99,8 @@ def capabilities():
         "cot_reports": ["tff","disaggregated","legacy"],
         "cot_source": os.getenv("FA_COT_SOURCE","cftc"),
         "llm_configured": has_llm,
-        "sec_configured": "@" in os.getenv("SEC_USER_AGENT", ""),
+        "sec_configured": bool(_sec_value),
+        "sec_config_source": sec_source,
         "quote_providers": [
             {"id":"yahoo","status":"available_unofficial"},
             {"id":"binance","status":"available_official"},

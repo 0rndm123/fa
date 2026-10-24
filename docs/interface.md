@@ -62,3 +62,27 @@ Manual agent selection always overrides automatic intent routing.
 
 Only Financial Performance, Financial Data and simple balance ratios have substantive deterministic fact computation.
 Governance, Competition and Industry Context are currently documentary *research starters*, not completed independent qualitative assessments.
+
+
+## Windows SEC_USER_AGENT troubleshooting
+
+The FA_Agent financial subagents use SEC_USER_AGENT to identify automated
+reads from the US SEC. Set it with the FA_Agent name and a real contact
+email in a Windows User environment variable. The contact is kept local to
+the user settings and is not committed to GitHub.
+
+The start batch file will import the Windows User setting into its own
+process if it is not already set. The Python provider independently falls
+back to the current user's Windows registry environment even when a server
+was started before the User variable was registered.
+
+The application exposes only configuration *readiness* and its *source*
+on GET /api/capabilities, via sec_configured and sec_config_source
+(process, windows_user or missing). It does not expose the contact address.
+
+In PowerShell, use this privacy-safe readiness diagnostic:
+    python -c "from fa_agents.providers import sec_user_agent_config; v,s=sec_user_agent_config(); print(bool(v),s)"
+
+An old FA_Agent server already bound to 127.0.0.1:8300 must be stopped
+before the updated script starts. If the server is still running, a
+browser may show the old code even after a successful git pull.
