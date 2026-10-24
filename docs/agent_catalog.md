@@ -1,4 +1,4 @@
-# FA_Agent | Agent and subagent functional registry (v0.5)
+# FA_Agent | Agent and subagent functional registry (v0.6)
 
 Catalogue entries distinguish operational calculation, partial source discovery and planned capabilities.
 
@@ -23,7 +23,9 @@ Catalogue entries distinguish operational calculation, partial source discovery 
 | backtest | Quant | Strategy verification | Planned |
 | risk | Risk | Rule-based research coverage review | Partial |
 
-## Market data subagents (separate from the 18 research registrations)
+| cot | CFTC Positioning | Weekly futures-only COT analysis by trader category | Working via public CFTC API; contract selection required when ambiguous |
+
+## Market data subagents (separate from the 19 research registrations)
 
 - Yahoo Finance Quote Agent: unofficial chart API, quote, timestamp, hourly OHLC when returned
 - Binance Spot Quote Agent: official public ticker and hourly kline endpoints, read-only

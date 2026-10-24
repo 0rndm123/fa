@@ -295,10 +295,11 @@ def review(results: list[AgentResult], selected: list[str]) -> AgentResult:
 
 def run_specialist(name: str, request: ResearchRequest, svc: Services) -> AgentResult:
     from .company_specialists import SPECIALIST_HANDLERS
+    from .cot import cot_specialist
     implemented = {
         "financial_data": financial_data, "fundamental": financial,
         "filings": filings, "news": news, "technical": technical,
-        **SPECIALIST_HANDLERS,
+        **SPECIALIST_HANDLERS, "cot": cot_specialist,
     }
     if name not in implemented:
         return AgentResult(

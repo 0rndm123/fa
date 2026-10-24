@@ -18,7 +18,7 @@ function compact(v){
   if(Math.abs(v)>=10000)return v.toLocaleString("en-US",{maximumFractionDigits:1});
   return v.toFixed(Math.abs(v)<2?4:2);
 }
-function createInteractiveChart({bars=[],history=[],currency=""}={}){
+function createInteractiveChart({bars=[],history=[],currency="",seriesLabel="Close"}={}){
   const cleanBar=bars.filter(x=>
     x && Number.isFinite(+x.open)&&Number.isFinite(+x.high)&&
     Number.isFinite(+x.low)&&Number.isFinite(+x.close)&&
@@ -63,7 +63,7 @@ function createInteractiveChart({bars=[],history=[],currency=""}={}){
       tip.textContent=stamp+" | O "+compact(+item.open)+"  H "+compact(+item.high)+
         "  L "+compact(+item.low)+"  C "+compact(+item.close)+" "+currency;
     }else{
-      tip.textContent=stamp+" | Close "+compact(+item.price)+" "+currency;
+      tip.textContent=stamp+" | "+seriesLabel+" "+compact(+item.price)+" "+currency;
     }
     tip.style.display="block";
   }

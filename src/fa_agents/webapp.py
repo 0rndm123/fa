@@ -25,7 +25,7 @@ from .providers import ProviderError, prices_from_csv
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
 
 WEB_DIR = Path(__file__).parent / "web"
-app = FastAPI(title="FA Agent Research Workbench", version="0.4.0",
+app = FastAPI(title="FA Agent Research Workbench", version="0.6.0",
               docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 _tmp = tempfile.TemporaryDirectory(prefix="fa_agent_web_")

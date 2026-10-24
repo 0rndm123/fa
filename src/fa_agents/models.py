@@ -1,6 +1,6 @@
 """Typed public interface to a standalone financial research engine."""
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, Field, field_validator
@@ -26,6 +26,8 @@ class ResearchRequest(BaseModel):
     as_of: datetime | None = None
     include_agents: list[str] | None = None
     exclude_agents: list[str] = Field(default_factory=list)
+    cot_market_code: str | None = None
+    cot_report_type: Literal["tff","disaggregated","legacy"] | None = None
 
     @field_validator("symbol")
     @classmethod
@@ -59,6 +61,38 @@ class FinancialObservation(BaseModel):
     source_id: str
 
 
+class CotMarket(BaseModel):
+    code: str
+    name: str
+    market: str
+
+
+class CotPosition(BaseModel):
+    group: str
+    long: int
+    short: int
+    net: int
+    net_pct_oi: float
+    net_wow: int | None = None
+
+
+class CotWeek(BaseModel):
+    report_date: date
+    open_interest: int
+    groups: list[CotPosition]
+
+
+class CotData(BaseModel):
+    report_type: Literal["tff","disaggregated","legacy"]
+    source: str
+    market_code: str | None = None
+    market_name: str | None = None
+    markets: list[CotMarket] = Field(default_factory=list)
+    weeks: list[CotWeek] = Field(default_factory=list)
+    latest: CotWeek | None = None
+    source_url: str | None = None
+
+
 class AgentResult(BaseModel):
     agent_id: str
     status: AgentStatus
@@ -66,6 +100,7 @@ class AgentResult(BaseModel):
     claims: list[str] = Field(default_factory=list)
     metrics: dict[str, float | str | None] = Field(default_factory=dict)
     observations: list[FinancialObservation] = Field(default_factory=list)
+    cot: CotData | None = None
     evidence: list[Evidence] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
 
@@ -117,7 +152,7 @@ class QuoteResult(BaseModel):
 
 
 class ResearchReport(BaseModel):
-    schema_version: str = "0.5"
+    schema_version: str = "0.6"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus

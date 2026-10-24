@@ -21,6 +21,7 @@ SPECIALISTS: dict[str, str] = {
     "etf": "ETF structure and tracking",
     "backtest": "Quantitative verification",
     "risk": "Review and challenge",
+    "cot": "CFTC futures positioning and trader category analysis",
 }
 _DEFAULT = {
     AssetClass.EQUITY: ("financial_data", "financial_performance", "debt_liquidity", "fundamental", "filings", "news", "technical", "risk"),
@@ -50,6 +51,9 @@ def select_for_question(request: ResearchRequest) -> list[str]:
     """
     if request.include_agents is not None:
         return choose_agents(request)
+    from .cot import is_cot_question
+    if is_cot_question(request.question):
+        return ["cot"]
     if request.asset_class != AssetClass.EQUITY:
         return choose_agents(request)
     import re

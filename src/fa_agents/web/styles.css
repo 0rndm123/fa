@@ -16,3 +16,9 @@
 .market-chart-canvas{position:relative;touch-action:none}
 .market-chart-canvas svg{width:100%;max-height:420px;display:block;cursor:crosshair;user-select:none;touch-action:none}
 .market-chart-tooltip{position:absolute;left:80px;top:4px;pointer-events:none;display:none;padding:6px 9px;background:#102236e8;border:1px solid #4c6986;border-radius:5px;font-size:12px;font-family:Consolas,monospace;color:#d5eaff}
+
+/* CFTC weekly positioning tab */
+.cot-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}
+.cot-controls select{flex:1;min-width:240px;max-width:780px;background:#101824;border:1px solid #354b60;border-radius:8px;color:#e9eff6;padding:9px 12px}
+.cot-controls .primary{white-space:nowrap}
+.cot-plot{width:100%;min-height:210px}

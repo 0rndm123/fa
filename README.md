@@ -47,7 +47,7 @@ fa-agent demo --output reports/demo.json
 Create an identifying SEC user agent with a real contact email; see SEC fair access conditions.
 
 ~~~powershell
-$env:SEC_USER_AGENT = "FA_Agent Nelson Contact real.email@domain.com"
+$env:SEC_USER_AGENT = "FA_Agent your-real-contact@example.com"
 fa-agent run --symbol AAPL --asset-class equity --include-agent fundamental --include-agent filings --output reports/aapl.json
 ~~~
 
@@ -104,7 +104,7 @@ The orchestrator and sources are separate. Services can be injected for testing 
 
 ## Local research workbench (v0.3)
 
-From the existing clone (e.g. C:\Users\nmota\fa):
+From the existing clone in D:\OD\OneDrive\tech\GitHub\rndm123\fa:
 
 ~~~powershell
 git pull origin main
@@ -146,3 +146,14 @@ The chat automatically dispatches equity questions about profitability/revenue, 
 The quote tab now has an interactive chart. Toggle between **Line** and **Candles** when authentic OHLC bars exist, wheel to zoom, drag to pan, hover for values, and reset. The chart never fabricates OHLC candles from closing prices.
 
 Financial sources are currently limited to SEC companies. Extended peer benchmarking, qualitative governance analysis and independently supported market studies remain future phases.
+
+
+## COT research agent v0.6
+
+The standalone Commitments of Traders specialist is available in **Live** mode.
+Ask "COT do ouro", "COT do petróleo" or "COT Nasdaq 100".
+The agent queries the CFTC's public futures-only reports and retrieves up to 52 weekly observations. If more than one futures contract matches, the COT tab requires choosing the exact CFTC contract code before computing results.
+
+COT includes long, short and net positioning by the appropriate report-family trader categories, weekly net change, net positions as a percentage of open interest, dynamic line charts and a table. Tuesday COT dates must **not** be treated as information available before Friday's usual release.
+
+This capability is independent of SysTrd. A future optional PostgreSQL backend is already behind the same CotSource read interface. No PostgreSQL database or tables have been created, and the default remains the official CFTC API. See [COT agent technical documentation](docs/cot.md) and [draft standalone database schema](sql/cot_schema.sql).
