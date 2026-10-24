@@ -183,3 +183,20 @@ def test_cot_tab_has_picker_and_historical_chart():
     assert "function renderCot(" in js
     assert "cot_market_code" in js
     assert "Net positioning" in js
+
+
+def test_workbench_exposes_cot_options_and_explicit_contract_selection(monkeypatch):
+    import fa_agents.cot as module
+    source=MockCotSource(candidates=[market("088691"),market("088692")])
+    monkeypatch.setattr(module,"get_source",lambda:source)
+    client=TestClient(app)
+    options=client.get("/api/capabilities").json()
+    assert "cot" in [item["id"] for item in options["agents"]]
+    assert options["cot_reports"] == ["tff","disaggregated","legacy"]
+    response=client.post("/api/analyze",json={
+        "symbol":"NVDA","mode":"live","question":"COT ouro",
+        "cot_market_code":"088691","cot_report_type":"disaggregated",
+    })
+    assert response.status_code==200,response.text
+    assert response.json()["report"]["results"][0]["cot"]["market_code"]=="088691"
+    assert source.queries==[("history","disaggregated","088691",52)]

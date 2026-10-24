@@ -66,6 +66,8 @@ class AnalyzeInput(BaseModel):
     llm: bool = False
     model: str | None = Field(default=None, max_length=100)
     price_upload_id: str | None = None
+    cot_market_code: str | None = Field(default=None, max_length=12)
+    cot_report_type: Literal["tff","disaggregated","legacy"] | None = None
     history: list[HistoryItem] = Field(default_factory=list, max_length=8)
 
     @field_validator("symbol")
@@ -90,9 +92,11 @@ def capabilities():
     return {
         "agents": [{"id": key, "description": value,
                     "implementation": ("working" if key in {"financial_data", "fundamental", "financial_performance"} else
-                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition"} else "planned")}
+                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition", "cot"} else "planned")}
                    for key, value in SPECIALISTS.items()],
         "classes": [cls.value for cls in AssetClass],
+        "cot_reports": ["tff","disaggregated","legacy"],
+        "cot_source": os.getenv("FA_COT_SOURCE","cftc"),
         "llm_configured": has_llm,
         "sec_configured": "@" in os.getenv("SEC_USER_AGENT", ""),
         "quote_providers": [
@@ -149,13 +153,17 @@ def analyze(payload: AnalyzeInput):
         if path is None or not path.is_file():
             raise HTTPException(404, "Price upload not found. Upload the file again.")
     try:
+        from .cot import is_cot_question
         resolved_symbol, resolved_class = (extract_symbol(
             payload.question, payload.symbol, payload.asset_class.value)
-            if payload.mode == "live" else (payload.symbol, payload.asset_class.value))
+            if payload.mode == "live" and not is_cot_question(payload.question)
+            else (payload.symbol, payload.asset_class.value))
         request = ResearchRequest(
             symbol=resolved_symbol, asset_class=resolved_class,
             exchange=payload.exchange, question=payload.question,
             horizon=payload.horizon, include_agents=payload.agents,
+            cot_market_code=payload.cot_market_code,
+            cot_report_type=payload.cot_report_type,
         )
         selected = select_for_question(request)
         request = request.model_copy(update={"include_agents": selected})
@@ -166,7 +174,9 @@ def analyze(payload: AnalyzeInput):
             # Context is untrusted text and only assists follow-up interpretation.
             context = [item.model_dump() for item in payload.history[-8:]]
             report.llm_commentary = explain(report, payload.model, history=context)
-        answer = report.llm_commentary or _coverage_answer(report)
+        from .cot import cot_answer
+        cot_record = next((x for x in report.results if x.agent_id == "cot"),None)
+        answer = report.llm_commentary or (cot_answer(cot_record) if cot_record else _coverage_answer(report))
         return {"report": report.model_dump(mode="json"), "answer": answer,
                 "selected_agents": selected}
     except (ValueError, RuntimeError, ProviderError, OSError) as exc:

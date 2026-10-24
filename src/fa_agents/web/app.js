@@ -1,6 +1,6 @@
 "use strict";
 const $=id=>document.getElementById(id);
-const state={report:null,activeTab:"overview",selectedAgents:null,uploadId:null,capabilities:null,running:false,metric:"revenue",messages:[]};
+const state={report:null,activeTab:"overview",selectedAgents:null,uploadId:null,capabilities:null,running:false,metric:"revenue",messages:[],cotMarketCode:null,cotReportType:null,cotForceAgents:false};
 const workspace=$("workspace"),NS="http://www.w3.org/2000/svg";
 function el(tag,cls="",value){const n=document.createElement(tag);if(cls)n.className=cls;if(value!==undefined&&value!==null)n.textContent=String(value);return n}
 function append(parent,...nodes){nodes.forEach(n=>parent.appendChild(n));return parent}
@@ -30,17 +30,17 @@ $("mode").onchange=()=>{const demo=$("mode").value==="demo";$("symbol").disabled
 $("mode").dispatchEvent(new Event("change"));
 $("priceUpload").onchange=async event=>{const file=event.target.files[0];if(!file)return;$("uploadLabel").textContent="Uploading "+file.name+"…";try{const form=new FormData();form.append("file",file);const r=await fetch("/api/upload-prices",{method:"POST",body:form});const data=await r.json();if(!r.ok)throw Error(data.detail||"CSV rejected");state.uploadId=data.upload_id;$("uploadLabel").textContent=file.name+" ("+data.observations+" rows)";hideError()}catch(err){state.uploadId=null;$("uploadLabel").textContent="Upload failed";showError(String(err.message))}};
 $("clearChat").onclick=()=>{state.messages=[];saveChat();clear($("messages"));drawMessage("assistant","Conversation cleared. Start a new research question.")};
-async function submitQuery(event){event.preventDefault();if(state.running)return;const q=$("question").value.trim();if(!q)return;const history=state.messages.slice(-8).map(x=>({role:x.role,content:x.content.slice(0,2000)}));drawMessage("user",q);$("question").value="";$("emptyState").classList.add("hidden");$("busy").classList.remove("hidden");$("submit").disabled=true;state.running=true;hideError();$("reportBadge").textContent="RUNNING";const payload={symbol:$("symbol").value.trim().toUpperCase(),asset_class:$("assetClass").value,mode:$("mode").value,question:q,horizon:$("horizon").value,agents:state.cotForceAgents?["cot"]:state.selectedAgents,llm:$("useLLM").checked,price_upload_id:state.uploadId,history};try{const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));state.report=data.report;drawMessage("assistant",data.answer);renderReport();if(workspace.classList.contains("chat-maximized"))toggleChat("max")}catch(err){const msg="Research failed: "+String(err.message||err);drawMessage("assistant",msg);showError(msg);$("reportBadge").textContent="ERROR"}finally{$("busy").classList.add("hidden");$("submit").disabled=false;state.running=false}}
+async function submitQuery(event){event.preventDefault();if(state.running)return;const q=$("question").value.trim();if(!q)return;const history=state.messages.slice(-8).map(x=>({role:x.role,content:x.content.slice(0,2000)}));drawMessage("user",q);$("question").value="";$("emptyState").classList.add("hidden");$("busy").classList.remove("hidden");$("submit").disabled=true;state.running=true;hideError();$("reportBadge").textContent="RUNNING";const payload={symbol:$("symbol").value.trim().toUpperCase(),asset_class:$("assetClass").value,mode:$("mode").value,question:q,horizon:$("horizon").value,agents:state.cotForceAgents?["cot"]:state.selectedAgents,llm:$("useLLM").checked,price_upload_id:state.uploadId,history,cot_market_code:state.cotMarketCode,cot_report_type:state.cotReportType};state.cotMarketCode=null;state.cotReportType=null;state.cotForceAgents=false;try{const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));state.report=data.report;drawMessage("assistant",data.answer);renderReport();if(workspace.classList.contains("chat-maximized"))toggleChat("max")}catch(err){const msg="Research failed: "+String(err.message||err);drawMessage("assistant",msg);showError(msg);$("reportBadge").textContent="ERROR"}finally{$("busy").classList.add("hidden");$("submit").disabled=false;state.running=false}}
 $("chatForm").onsubmit=submitQuery;
 $("question").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("chatForm").requestSubmit()}};
 function agents(){return state.report?.results||[]}
 function agent(id){return agents().find(x=>x.agent_id===id)||null}
 function sources(){const seen=new Set(),items=[];agents().forEach(a=>(a.evidence||[]).forEach(e=>{const key=e.source_id+"|"+e.source_url;if(seen.has(key))return;seen.add(key);items.push({...e,agent:a.agent_id})}));return items}
-function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[...(r.market_quote?[["quote","Quote"]]:[]),["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),
+function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[...(r.market_quote?[["quote","Quote"]]:[]),...(agent("cot")?[["cot","COT"]]:[]),["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),
     ...(agent("debt_liquidity")?[["debt","Debt & Liquidity"]]:[]),
     ...(agent("governance")?[["governance","Governance"]]:[]),
-    ...(agent("competition")||agent("industry_context")?[["sector","Sector & Peers"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(r.market_quote)state.activeTab="quote";else if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
-function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"quote":renderQuote(parent);break;case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"debt":renderSpecialistTopic(parent,["debt_liquidity"]);break;case"governance":renderSpecialistTopic(parent,["governance"]);break;case"sector":renderSpecialistTopic(parent,["industry_context","competition"]);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
+    ...(agent("competition")||agent("industry_context")?[["sector","Sector & Peers"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(r.market_quote)state.activeTab="quote";else if(agent("cot"))state.activeTab="cot";else if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
+function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"quote":renderQuote(parent);break;case"cot":renderCot(parent);break;case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"debt":renderSpecialistTopic(parent,["debt_liquidity"]);break;case"governance":renderSpecialistTopic(parent,["governance"]);break;case"sector":renderSpecialistTopic(parent,["industry_context","competition"]);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
 function renderOverview(parent){const lead=el("section","report-lead");lead.appendChild(el("h3","","Research summary"));paragraph(lead,state.report.summary,"");parent.appendChild(lead);if(state.report.llm_commentary){title(parent,"AI evidence commentary");const b=el("section","report-lead");paragraph(b,state.report.llm_commentary,"");parent.appendChild(b)}title(parent,"Research coverage");const counts={completed:0,partial:0,no_data:0,failed:0,not_implemented:0};agents().forEach(x=>counts[x.status]=(counts[x.status]||0)+1);const grid=el("div","kpi-grid");append(grid,valueRow("Completed",counts.completed),valueRow("Partial",counts.partial),valueRow("Unavailable",counts.no_data+counts.failed+counts.not_implemented),valueRow("Source records",sources().length));parent.appendChild(grid);const metrics=agent("financial_performance")?.metrics||agent("fundamental")?.metrics||agent("financial_data")?.metrics;if(metrics){title(parent,"Key financial metrics");const g=el("div","kpi-grid");["revenue_usd","annual_revenue_growth_pct","net_margin_pct","fcf_proxy_usd"].forEach(k=>{if(metrics[k]!==undefined)g.appendChild(valueRow(k,metrics[k]))});if(g.childElementCount)parent.appendChild(g)}title(parent,"Specialist outcomes");parent.appendChild(table(["Specialist","Status","Summary"],agents().map(x=>[x.agent_id,x.status,x.summary||x.limitations?.[0]||"—"])));if(state.report.warnings?.length){title(parent,"Warnings");const box=section("Coverage limits"),ul=el("ul");state.report.warnings.forEach(x=>ul.appendChild(el("li","",x)));box.appendChild(ul);parent.appendChild(box)}}
 function compact(v){const abs=Math.abs(v);if(abs>=1e9)return(v/1e9).toFixed(1)+"B";if(abs>=1e6)return(v/1e6).toFixed(1)+"M";if(abs>=1e3)return(v/1e3).toFixed(1)+"K";return v.toFixed(1)}
 function drawLineChart(points){const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 700 250");svg.setAttribute("class","chart");svg.setAttribute("role","img");svg.setAttribute("aria-label","Numeric time series");const values=points.map(p=>Number(p.y));if(!points.length||values.some(x=>!Number.isFinite(x)))return el("div","empty-chart","No numeric history");const L=78,R=678,T=22,B=207;let lo=Math.min(...values),hi=Math.max(...values);if(lo===hi){lo-=Math.max(1,Math.abs(lo)*.1);hi+=Math.max(1,Math.abs(hi)*.1)}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const X=i=>L+(points.length===1?.5:i/(points.length-1))*(R-L),Y=v=>B-(v-lo)/(hi-lo)*(B-T);const line=(a,b,c,d)=>{const n=document.createElementNS(NS,"line");Object.entries({x1:a,y1:b,x2:c,y2:d}).forEach(([key,v])=>n.setAttribute(key,String(v)));svg.appendChild(n)};const text=(x,y,s,anchor="start")=>{const n=document.createElementNS(NS,"text");n.setAttribute("x",x);n.setAttribute("y",y);n.setAttribute("text-anchor",anchor);n.textContent=s;svg.appendChild(n)};for(let i=0;i<=4;i++){const y=T+i*(B-T)/4;line(L,y,R,y);text(L-9,y+3,compact(hi-i*(hi-lo)/4),"end")}text(L,B+24,points[0].x);if(points.length>1)text(R,B+24,points[points.length-1].x,"end");const poly=document.createElementNS(NS,"polyline");poly.setAttribute("points",points.map((p,i)=>X(i).toFixed(1)+","+Y(Number(p.y)).toFixed(1)).join(" "));svg.appendChild(poly);if(points.length<=24)points.forEach((p,i)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",X(i));c.setAttribute("cy",Y(Number(p.y)));c.setAttribute("r",3.5);c.setAttribute("fill","#a8d6ff");svg.appendChild(c)});return svg}
@@ -132,4 +132,80 @@ function renderSpecialistTopic(parent,selected){
     }
     parent.appendChild(card);
   }
+}
+
+
+function renderCot(parent){
+  const result=agent("cot");if(!result)return;
+  const cot=result.cot;
+  if(!cot){
+    const card=section("COT · Contract not identified");
+    paragraph(card,result.summary||"No COT records available.");
+    (result.limitations||[]).forEach(line=>paragraph(card,line));
+    parent.appendChild(card);return;
+  }
+  if(cot.markets?.length){
+    const panel=section("Select a CFTC futures contract");
+    paragraph(panel,"Several market contracts match this question. Choose the exact futures contract; COT is not published for individual company shares.");
+    const controls=el("div","cot-controls"),picker=el("select");
+    cot.markets.forEach(m=>{
+      const opt=el("option","",m.market+" · "+m.name+" ["+m.code+"]");
+      opt.value=m.code;picker.appendChild(opt);
+    });
+    const button=el("button","primary","Load selected contract");
+    button.type="button";button.onclick=()=>{
+      if(state.running)return;
+      const selected=cot.markets.find(m=>m.code===picker.value);
+      if(!selected)return;
+      $("mode").value="live";$("mode").dispatchEvent(new Event("change"));
+      state.cotMarketCode=selected.code;state.cotReportType=cot.report_type;
+      state.cotForceAgents=true;
+      $("question").value="COT do contrato "+selected.market+" ("+selected.code+")";
+      $("chatForm").requestSubmit();
+    };
+    controls.append(picker,button);panel.appendChild(controls);
+    parent.appendChild(panel);return;
+  }
+  if(!cot.latest){paragraph(parent,"No usable weekly reports were returned.");return;}
+  const latest=cot.latest,card=el("section","report-lead");
+  card.appendChild(el("h3","",(cot.market_name||"Contract")+" · "+cot.market_code));
+  paragraph(card,"CFTC "+cot.report_type.toUpperCase()+" · Futures only · Position report "+latest.report_date+" · "+cot.source);
+  const stats=el("div","kpi-grid");
+  append(stats,valueRow("Open interest (contracts)",latest.open_interest),valueRow("Report date",latest.report_date),valueRow("History (weeks)",(cot.weeks||[]).length));
+  card.appendChild(stats);parent.appendChild(card);
+  title(parent,"Traders' latest positions");
+  parent.appendChild(table(["Category","Long","Short","Net","Net / OI %","Δ weekly net"],
+    latest.groups.map(g=>[g.group,g.long,g.short,g.net,g.net_pct_oi,g.net_wow??"—"])));
+  const weeks=cot.weeks||[];
+  if(weeks.length){
+    const chart=section("Weekly net positions by trader category");
+    const controls=el("div","cot-controls"),label=el("span","muted-note","Trader category"),picker=el("select");
+    latest.groups.forEach(g=>{const option=el("option","",g.group);option.value=g.group;picker.appendChild(option)});
+    controls.append(label,picker);chart.appendChild(controls);
+    const graphic=el("div","cot-plot");chart.appendChild(graphic);
+    const redraw=()=>{
+      clear(graphic);
+      const series=weeks.map(w=>{
+        const r=(w.groups||[]).find(p=>p.group===picker.value);
+        return r?{at:w.report_date+"T00:00:00Z",price:r.net}:null;
+      }).filter(Boolean);
+      if(window.FAInteractiveChart){
+        graphic.appendChild(window.FAInteractiveChart.createInteractiveChart({
+          history:series,currency:"contracts",seriesLabel:"Net positioning"
+        }));
+      }else{
+        graphic.appendChild(drawLineChart(series.map(p=>({x:p.at,y:p.price}))));
+      }
+    };
+    picker.onchange=redraw;redraw();
+    paragraph(chart,"COT report dates are Tuesday snapshots, not release timestamps. Zoom and pan the historical chart.");
+    parent.appendChild(chart);
+    title(parent,"Historical COT data");
+    parent.appendChild(table(["Report date","Open interest",...latest.groups.map(g=>g.group+" net")],
+      [...weeks].reverse().map(w=>[w.report_date,w.open_interest,
+        ...latest.groups.map(g=>(w.groups||[]).find(x=>x.group===g.group)?.net??"—")])));
+  }
+  const limitations=section("Interpretation and limitations");
+  (result.limitations||[]).forEach(line=>paragraph(limitations,line));
+  parent.appendChild(limitations);
 }
