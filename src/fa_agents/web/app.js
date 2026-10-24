@@ -36,11 +36,11 @@ $("question").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.p
 function agents(){return state.report?.results||[]}
 function agent(id){return agents().find(x=>x.agent_id===id)||null}
 function sources(){const seen=new Set(),items=[];agents().forEach(a=>(a.evidence||[]).forEach(e=>{const key=e.source_id+"|"+e.source_url;if(seen.has(key))return;seen.add(key);items.push({...e,agent:a.agent_id})}));return items}
-function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[...(r.market_quote?[["quote","Quote"]]:[]),...(agent("cot")?[["cot","COT"]]:[]),["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),
+function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[...(r.market_quote?[["quote","Quote"]]:[]),...(agent("cot")?[["cot","COT"]]:[]),...(agent("crypto_derivatives")?[["crypto","Crypto Derivatives"]]:[]),["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),
     ...(agent("debt_liquidity")?[["debt","Debt & Liquidity"]]:[]),
     ...(agent("governance")?[["governance","Governance"]]:[]),
-    ...(agent("competition")||agent("industry_context")?[["sector","Sector & Peers"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(r.market_quote)state.activeTab="quote";else if(agent("cot"))state.activeTab="cot";else if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
-function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"quote":renderQuote(parent);break;case"cot":renderCot(parent);break;case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"debt":renderSpecialistTopic(parent,["debt_liquidity"]);break;case"governance":renderSpecialistTopic(parent,["governance"]);break;case"sector":renderSpecialistTopic(parent,["industry_context","competition"]);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
+    ...(agent("competition")||agent("industry_context")?[["sector","Sector & Peers"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(r.market_quote)state.activeTab="quote";else if(agent("cot"))state.activeTab="cot";else if(agent("crypto_derivatives"))state.activeTab="crypto";else if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
+function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"quote":renderQuote(parent);break;case"cot":renderCot(parent);break;case"crypto":renderCryptoDerivatives(parent);break;case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"debt":renderSpecialistTopic(parent,["debt_liquidity"]);break;case"governance":renderSpecialistTopic(parent,["governance"]);break;case"sector":renderSpecialistTopic(parent,["industry_context","competition"]);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
 function renderOverview(parent){const lead=el("section","report-lead");lead.appendChild(el("h3","","Research summary"));paragraph(lead,state.report.summary,"");parent.appendChild(lead);if(state.report.llm_commentary){title(parent,"AI evidence commentary");const b=el("section","report-lead");paragraph(b,state.report.llm_commentary,"");parent.appendChild(b)}title(parent,"Research coverage");const counts={completed:0,partial:0,no_data:0,failed:0,not_implemented:0};agents().forEach(x=>counts[x.status]=(counts[x.status]||0)+1);const grid=el("div","kpi-grid");append(grid,valueRow("Completed",counts.completed),valueRow("Partial",counts.partial),valueRow("Unavailable",counts.no_data+counts.failed+counts.not_implemented),valueRow("Source records",sources().length));parent.appendChild(grid);const metrics=agent("financial_performance")?.metrics||agent("fundamental")?.metrics||agent("financial_data")?.metrics;if(metrics){title(parent,"Key financial metrics");const g=el("div","kpi-grid");["revenue_usd","annual_revenue_growth_pct","net_margin_pct","fcf_proxy_usd"].forEach(k=>{if(metrics[k]!==undefined)g.appendChild(valueRow(k,metrics[k]))});if(g.childElementCount)parent.appendChild(g)}title(parent,"Specialist outcomes");parent.appendChild(table(["Specialist","Status","Summary"],agents().map(x=>[x.agent_id,x.status,x.summary||x.limitations?.[0]||"—"])));if(state.report.warnings?.length){title(parent,"Warnings");const box=section("Coverage limits"),ul=el("ul");state.report.warnings.forEach(x=>ul.appendChild(el("li","",x)));box.appendChild(ul);parent.appendChild(box)}}
 function compact(v){const abs=Math.abs(v);if(abs>=1e9)return(v/1e9).toFixed(1)+"B";if(abs>=1e6)return(v/1e6).toFixed(1)+"M";if(abs>=1e3)return(v/1e3).toFixed(1)+"K";return v.toFixed(1)}
 function drawLineChart(points){const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 700 250");svg.setAttribute("class","chart");svg.setAttribute("role","img");svg.setAttribute("aria-label","Numeric time series");const values=points.map(p=>Number(p.y));if(!points.length||values.some(x=>!Number.isFinite(x)))return el("div","empty-chart","No numeric history");const L=78,R=678,T=22,B=207;let lo=Math.min(...values),hi=Math.max(...values);if(lo===hi){lo-=Math.max(1,Math.abs(lo)*.1);hi+=Math.max(1,Math.abs(hi)*.1)}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const X=i=>L+(points.length===1?.5:i/(points.length-1))*(R-L),Y=v=>B-(v-lo)/(hi-lo)*(B-T);const line=(a,b,c,d)=>{const n=document.createElementNS(NS,"line");Object.entries({x1:a,y1:b,x2:c,y2:d}).forEach(([key,v])=>n.setAttribute(key,String(v)));svg.appendChild(n)};const text=(x,y,s,anchor="start")=>{const n=document.createElementNS(NS,"text");n.setAttribute("x",x);n.setAttribute("y",y);n.setAttribute("text-anchor",anchor);n.textContent=s;svg.appendChild(n)};for(let i=0;i<=4;i++){const y=T+i*(B-T)/4;line(L,y,R,y);text(L-9,y+3,compact(hi-i*(hi-lo)/4),"end")}text(L,B+24,points[0].x);if(points.length>1)text(R,B+24,points[points.length-1].x,"end");const poly=document.createElementNS(NS,"polyline");poly.setAttribute("points",points.map((p,i)=>X(i).toFixed(1)+","+Y(Number(p.y)).toFixed(1)).join(" "));svg.appendChild(poly);if(points.length<=24)points.forEach((p,i)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",X(i));c.setAttribute("cy",Y(Number(p.y)));c.setAttribute("r",3.5);c.setAttribute("fill","#a8d6ff");svg.appendChild(c)});return svg}
@@ -208,4 +208,68 @@ function renderCot(parent){
   const limitations=section("Interpretation and limitations");
   (result.limitations||[]).forEach(line=>paragraph(limitations,line));
   parent.appendChild(limitations);
+}
+
+
+function renderCryptoDerivatives(parent){
+  const result=agent("crypto_derivatives");
+  if(!result)return;
+  const data=result.crypto_derivatives;
+  if(!data){
+    const card=section("Crypto derivatives · Data unavailable");
+    paragraph(card,result.summary);
+    (result.limitations||[]).forEach(x=>paragraph(card,x));
+    parent.appendChild(card);
+    return;
+  }
+  const panel=el("section","report-lead");
+  panel.appendChild(el("h3","",data.instrument+" · "+data.provider));
+  paragraph(panel,"Market "+data.market_type+" · Retrieved "+data.retrieved_at.slice(0,19)+" UTC");
+  const stats=el("div","kpi-grid");
+  for(const [metric,label] of [
+    ["funding_rate_pct","Last settled funding (%)"],
+    ["open_interest","Open interest (base asset)"],
+    ["global_long_short_account_ratio","Long / short accounts ratio"]
+  ]){
+    if(result.metrics?.[metric]!==undefined){
+      stats.appendChild(valueRow(label,result.metrics[metric]));
+    }
+  }
+  if(stats.childElementCount)panel.appendChild(stats);
+  parent.appendChild(panel);
+  const series=data.series||[];
+  const keys=[...new Set(series.map(x=>x.metric))];
+  if(keys.length){
+    const chart=section("Historical Binance Futures observations");
+    const toolbar=el("div","cot-controls"),picker=el("select");
+    keys.forEach(key=>{const option=el("option","",key.replaceAll("_"," "));option.value=key;picker.appendChild(option)});
+    toolbar.appendChild(picker);chart.appendChild(toolbar);
+    const plot=el("div","cot-plot");chart.appendChild(plot);
+    const redraw=()=>{
+      clear(plot);
+      const selected=series.filter(x=>x.metric===picker.value);
+      if(selected.length>1){
+        const points=selected.map(x=>({at:x.at,price:x.value}));
+        if(window.FAInteractiveChart){
+          plot.appendChild(window.FAInteractiveChart.createInteractiveChart({
+            history:points,currency:selected[0]?.unit||"",
+            seriesLabel:picker.value.replaceAll("_"," ")
+          }));
+        }else plot.appendChild(drawLineChart(points.map(x=>({x:x.at,y:x.price}))));
+      }else{
+        plot.appendChild(el("p","muted-note","Only one snapshot is available. A historical chart requires at least two observations."));
+      }
+    };
+    picker.onchange=redraw;redraw();
+    paragraph(chart,"Funding rates are settlement observations per funding interval. Long/short ratios count accounts, not contracts. Open interest is a timestamped snapshot.");
+    parent.appendChild(chart);
+    title(parent,"All source observations");
+    parent.appendChild(table(["Metric","Time (UTC)","Value","Unit"],
+      [...series].sort((a,b)=>b.at.localeCompare(a.at)).map(x=>[
+        x.metric.replaceAll("_"," "),x.at.slice(0,19).replace("T"," "),x.value,x.unit
+      ])));
+  }
+  const info=section("Provider and scope");
+  (result.limitations||[]).forEach(x=>paragraph(info,x));
+  parent.appendChild(info);
 }

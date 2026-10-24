@@ -92,7 +92,7 @@ def capabilities():
     return {
         "agents": [{"id": key, "description": value,
                     "implementation": ("working" if key in {"financial_data", "fundamental", "financial_performance"} else
-                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition", "cot"} else "planned")}
+                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition", "cot", "crypto_derivatives"} else "planned")}
                    for key, value in SPECIALISTS.items()],
         "classes": [cls.value for cls in AssetClass],
         "cot_reports": ["tff","disaggregated","legacy"],
@@ -176,7 +176,11 @@ def analyze(payload: AnalyzeInput):
             report.llm_commentary = explain(report, payload.model, history=context)
         from .cot import cot_answer
         cot_record = next((x for x in report.results if x.agent_id == "cot"),None)
-        answer = report.llm_commentary or (cot_answer(cot_record) if cot_record else _coverage_answer(report))
+        from .crypto_derivatives import crypto_answer
+        crypto_record = next((x for x in report.results if x.agent_id == "crypto_derivatives"),None)
+        answer = report.llm_commentary or (
+            cot_answer(cot_record) if cot_record else
+            crypto_answer(crypto_record) if crypto_record else _coverage_answer(report))
         return {"report": report.model_dump(mode="json"), "answer": answer,
                 "selected_agents": selected}
     except (ValueError, RuntimeError, ProviderError, OSError) as exc:

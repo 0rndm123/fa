@@ -157,3 +157,17 @@ The agent queries the CFTC's public futures-only reports and retrieves up to 52 
 COT includes long, short and net positioning by the appropriate report-family trader categories, weekly net change, net positions as a percentage of open interest, dynamic line charts and a table. Tuesday COT dates must **not** be treated as information available before Friday's usual release.
 
 This capability is independent of SysTrd. A future optional PostgreSQL backend is already behind the same CotSource read interface. No PostgreSQL database or tables have been created, and the default remains the official CFTC API. See [COT agent technical documentation](docs/cot.md) and [draft standalone database schema](sql/cot_schema.sql).
+
+
+## Crypto derivatives / BTC and ETH COT (v0.7)
+
+Ask "COT do Bitcoin" or "COT do ETH" in Live to search official CFTC TFF
+futures-only contracts and select the precise market if ambiguous.
+
+Ask "Qual o funding do BTC?" or "Open interest e rácio long/short do ETH?"
+with asset class Crypto for the independent Binance USD-M Futures specialist.
+The Crypto Derivatives tab displays funding settlement history, current OI,
+and ratios of long/short accounts separately, with units and timestamps.
+
+These Binance futures measures are not COT positioning categories, and do not
+represent the complete cryptocurrency market. See docs/crypto_derivatives.md.

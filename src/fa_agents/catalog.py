@@ -22,6 +22,7 @@ SPECIALISTS: dict[str, str] = {
     "backtest": "Quantitative verification",
     "risk": "Review and challenge",
     "cot": "CFTC futures positioning and trader category analysis",
+    "crypto_derivatives": "Binance USD-M funding, open interest and account positioning",
 }
 _DEFAULT = {
     AssetClass.EQUITY: ("financial_data", "financial_performance", "debt_liquidity", "fundamental", "filings", "news", "technical", "risk"),
@@ -54,6 +55,11 @@ def select_for_question(request: ResearchRequest) -> list[str]:
     from .cot import is_cot_question
     if is_cot_question(request.question):
         return ["cot"]
+    if request.asset_class == AssetClass.CRYPTO:
+        from .crypto_derivatives import is_derivatives_question
+        if is_derivatives_question(request.question):
+            return ["crypto_derivatives"]
+        return choose_agents(request)
     if request.asset_class != AssetClass.EQUITY:
         return choose_agents(request)
     import re

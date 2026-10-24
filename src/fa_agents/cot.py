@@ -51,6 +51,8 @@ GROUP_FIELDS = {
 
 CONTRACT_PATTERN = re.compile(r"^[0-9A-Za-z]{4,12}$")
 ALIASES = {
+    "bitcoin":("tff","BITCOIN"),"btc":("tff","BITCOIN"),
+    "ethereum":("tff","ETHER"),"ether":("tff","ETHER"),"eth":("tff","ETHER"),
     "ouro": ("disaggregated","GOLD"),"gold":("disaggregated","GOLD"),
     "prata": ("disaggregated","SILVER"),"silver":("disaggregated","SILVER"),
     "petroleo":("disaggregated","CRUDE OIL"),"wti":("disaggregated","CRUDE OIL"),
@@ -78,8 +80,14 @@ def select_cot_market(question: str, symbol: str, report_type: str | None = None
     """Return report family + *search phrase*, NOT an unverified contract code."""
     text=normalize(question)
     for term,(family,needle) in sorted(ALIASES.items(),key=lambda pair:-len(pair[0])):
-        if term in text:
+        if re.search(r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", text):
             return report_type or family,needle
+    # If the user asks simply for COT with BTC/ETH selected, resolve the
+    # selected underlying to a futures-market *search*, never a silent contract.
+    if re.fullmatch(r"(qual e o\s+)?cot(?:\s+(?:do ativo|deste ativo))?\s*[?!.]*",text.strip()):
+        asset=symbol.upper().strip().removesuffix("USDT").removesuffix("-USD")
+        if asset in {"BTC","ETH"}:
+            return report_type or "tff", {"BTC":"BITCOIN","ETH":"ETHER"}[asset]
     # A ticker for an individual equity is not a supported COT market mapping.
     return report_type or "tff",None
 

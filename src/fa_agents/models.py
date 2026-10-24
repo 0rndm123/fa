@@ -93,6 +93,21 @@ class CotData(BaseModel):
     source_url: str | None = None
 
 
+class CryptoMetricPoint(BaseModel):
+    metric: str
+    at: datetime
+    value: float
+    unit: str
+
+
+class CryptoDerivativesData(BaseModel):
+    provider: str
+    instrument: str
+    market_type: str
+    retrieved_at: datetime
+    series: list[CryptoMetricPoint] = Field(default_factory=list)
+
+
 class AgentResult(BaseModel):
     agent_id: str
     status: AgentStatus
@@ -101,6 +116,7 @@ class AgentResult(BaseModel):
     metrics: dict[str, float | str | None] = Field(default_factory=dict)
     observations: list[FinancialObservation] = Field(default_factory=list)
     cot: CotData | None = None
+    crypto_derivatives: CryptoDerivativesData | None = None
     evidence: list[Evidence] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
 
@@ -152,7 +168,7 @@ class QuoteResult(BaseModel):
 
 
 class ResearchReport(BaseModel):
-    schema_version: str = "0.6"
+    schema_version: str = "0.7"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus
