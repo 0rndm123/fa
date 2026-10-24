@@ -1,45 +1,48 @@
-# FA_Agent | Specialist catalogue
+# FA_Agent | Agent and subagent functional registry (v0.5)
 
-An agent's presence in this catalogue does **not** imply it is operational.
+Catalogue entries distinguish operational calculation, partial source discovery and planned capabilities.
 
-| agent_id | Crew | Function | v0.2 status |
+| ID | Crew | Mission | Status |
 | --- | --- | --- | --- |
-| filings | Financial | Identify dated issuer SEC filings | Partial: metadata only |
-| fundamental | Financial | Annual fundamental ratios and cash generation | Working: SEC XBRL US equities |
-| valuation | Financial | DCF, multiples, peer valuation, assumptions | Not implemented |
-| industry | Industry | Competition, sector economics, peer rankings | Not implemented |
-| macro | Macro & Market | Monetary conditions, business cycle, asset sensitivity | Not implemented |
-| news | News & Events | Dated headlines, future catalysts | Partial: current RSS headlines |
-| technical | Technical | Daily trend, levels, momentum, structure | Partial: CSV SMA metrics |
-| sentiment | Macro & Market | Market positioning, flows, derivatives | Not implemented |
-| crypto_onchain | Asset-Specific | Tokenomics, on-chain metrics | Not implemented |
-| etf | Asset-Specific | ETF holdings, fees and tracking | Not implemented |
-| backtest | Quant | Statistical reproducibility and signal testing | Not implemented |
-| risk | Risk & Decision | Challenge, scenarios, coverage, invalidation | Partial: rules only |
+| financial_data | Financial | Dated annual SEC financial statement history | Working US SEC |
+| financial_performance | Financial | Growth, margins, earnings, operating cash, FCF proxy | Working US SEC |
+| debt_liquidity | Financial | Debt components, working capital, current ratio | Partial. Depends on accounting tags |
+| fundamental | Financial | Basic annual company ratios | Working US SEC |
+| filings | Financial | SEC 10-K/10-Q/8-K discovery | Partial. Metadata only |
+| governance | Financial | Locate DEF 14A/10-K governance sources | Partial. No board/compensation judgement |
+| industry_context | Sector | SEC SIC, limited 10-K industry evidence | Partial. Not market research |
+| competition | Sector | Locate 10-K competition evidence | Partial. No verified competitor rankings |
+| valuation | Financial | Relative and DCF valuations | Planned |
+| industry | Sector | Full peer/industry model | Planned |
+| macro | Macro | Monetary policy, macro regimes | Planned |
+| news | Events | Current RSS headline metadata | Partial. Headlines only |
+| technical | Technical | Daily CSV or vendor hourly price SMA and simple RSI | Partial |
+| sentiment | Market | Positioning and flow analysis | Planned |
+| crypto_onchain | Crypto | Supply, distribution and protocol metrics | Planned |
+| etf | ETF | Holdings and tracking | Planned |
+| backtest | Quant | Strategy verification | Planned |
+| risk | Risk | Rule-based research coverage review | Partial |
 
-Orchestrator is a control-flow component, not an opinion agent. Validation and Synthesis are separate stages.
+## Market data subagents (separate from the 18 research registrations)
 
-## Intended subagents
+- Yahoo Finance Quote Agent: unofficial chart API, quote, timestamp, hourly OHLC when returned
+- Binance Spot Quote Agent: official public ticker and hourly kline endpoints, read-only
+- TradingView Quote Agent: local authorized adapter interface only, no public unofficial scraping
+- Market Data Orchestrator: determine providers, query independently, compare source times/currencies and expose failures
 
-### Financial
-Financial Statements, Growth and Margins, Cash Flow Quality, Debt/Liquidity, Earnings Expectations, Valuation, Governance.
+## Orchestration
 
-### Technical
-Trend and Structure, Price Action, Momentum, Volatility, Volume, Relative Strength, Multi-Timeframe Assessment.
+- The API automatically maps natural-language financial/debt/governance/competition/sector/technical questions to the corresponding specialist functions.
+- Explicit selected agents take precedence.
+- LangGraph fans out the workers and joins source-based reports.
+- Debt/Performance calculations are deterministic. LLM commentary uses source records when enabled but is **not** an independent SEC extraction tool.
+- Web research is read-only. No broker, exchange-account or order functionality.
+- Official company filing metadata or raw excerpts do not automatically constitute an evaluated governance or competitive outlook.
 
-### Sector
-Industry Structure, Sector Economics, Competitive Intelligence, Peer Benchmark, Sector Cycle, Structural/Regulatory Change.
+## Roadmap: deeper specialists
 
-### Macro
-Growth/Inflation, Monetary Policy, Rates/Credit/Liquidity, Cross-Asset, Flows/Positioning.
-
-### Events
-Primary Source Verification, Corporate Events, Catalyst Calendar, Sentiment/Narrative.
-
-### Quant
-Signal Formalization, Backtesting, Regime Stability, Statistical Robustness, Conditional Outcomes.
-
-### Risk
-Fundamental Risk, Market Risk, Independent Challenger, Scenario/Decision Review.
-
-Specialists may start as functions and data tools. Autonomous LLM subagents are justified only where independent research, reasoning or planning demonstrably improves the result. Financial arithmetic remains deterministic.
+- Corporate governance: board composition, executive remuneration, voting, insider transactions with verifiable passages
+- Peers/sector: verified company universe, share/market sizing, value chain, competitive performance
+- Financial: cash flow quality, debt maturities and covenants, profitability decomposition, forecasts and valuation
+- Technical: daily/weekly OHLCV, swing structure, indicators with documented calculation variants and backtest links
+- Cross-asset: independent challenger, event risk and scenario assessment

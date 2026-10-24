@@ -3,7 +3,7 @@
 Standalone Python **LangGraph / LangChain** financial research application. Repository: 0rndm123/fa.
 No dependency on SysTrd, its database or any other application. Future integrations use read-only adapters.
 
-## What actually works (v0.2)
+## Core capabilities (v0.5)
 
 - LangGraph orchestrator: deterministic asset-aware selection, parallel specialist workers, source-gap review, report synthesis.
 - **Fundamental**: reads **annual 10-K XBRL** from the US SEC and calculates revenue growth, net margin and a free-cash-flow proxy. These metrics are *not* valuation or investment advice.
@@ -11,7 +11,7 @@ No dependency on SysTrd, its database or any other application. Future integrati
 - **News**: Google News RSS headline discovery. Does *not* verify or read full articles.
 - **Technical**: calculates latest close, SMA20, SMA50, SMA200 where possible from user-provided daily CSV. No signal/backtest yet.
 - **Risk**: preliminary rule-based coverage review; independent critical research is not implemented.
-- 12 specialist names in catalog. Unimplemented ones explicitly return not_implemented.
+- 18 specialist names in catalog. Unimplemented ones explicitly return not_implemented.
 - Optional LangChain/OpenAI commentary on evidence already collected, **never** a substitute for evidence.
 
 ## Install (Windows PowerShell)
