@@ -25,9 +25,9 @@
           </div>
         </div>
         <div class="asset-controls">
-          <div class="two"><label>Symbol<input id="symbol" spellcheck="false" placeholder="NVDA" value="DEMO" maxlength="40"></label>
+          <div class="two"><label>Symbol<input id="symbol" spellcheck="false" placeholder="NVDA" value="NVDA" maxlength="40"></label>
             <label>Asset class<select id="assetClass"><option value="equity">Equity</option><option value="etf">ETF</option><option value="crypto">Crypto</option><option value="commodity">Commodity</option><option value="fx">FX</option><option value="index">Index</option><option value="other">Other</option></select></label></div>
-          <div class="two"><label>Research mode<select id="mode"><option value="demo">Demo · synthetic</option><option value="live">Live · sources</option></select></label>
+          <div class="two"><label>Research mode<select id="mode"><option value="live" selected>Live · sources</option><option value="demo">Demo · synthetic</option></select></label>
             <label>Horizon<select id="horizon"><option value="short">Short term</option><option value="medium" selected>Medium term</option><option value="long">Long term</option></select></label></div>
           <div class="options">
             <label class="checkline"><input type="checkbox" id="useLLM"><span>AI commentary</span></label>
@@ -37,7 +37,7 @@
           <div class="uploadrow"><label class="upload-button">+ Price CSV <input id="priceUpload" type="file" accept=".csv,text/csv" hidden></label><span id="uploadLabel" class="subtle ellipsis">Optional for technical analysis</span></div>
         </div>
         <div class="messages" id="messages" aria-live="polite">
-          <div class="message assistant"><span class="message-role">FA Agent</span><p>Choose an asset and ask a question. Results will appear in the analysis workspace. Demo uses explicitly synthetic data.</p></div>
+          <div class="message assistant"><span class="message-role">FA Agent</span><p>Ask for a market quote or a financial analysis. Example: Qual é o preço da NVIDIA? Use Demo for synthetic analysis tests.</p></div>
         </div>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>

@@ -119,3 +119,14 @@ The new **Financial Data** specialist pulls up to six years per available annual
 The UI is **local only**, not a production service. Use synthetic DEMO without keys; switch to Live with a real equity ticker for SEC data when SEC_USER_AGENT is set. OPENAI_API_KEY_Demo is recognized for the optional AI commentary. Chat follow-ups provide bounded recent history to the LLM, but live research is re-run for each message; it is not yet a fully autonomous conversational research planner.
 
 Price analysis requires uploading a CSV with date and close columns. The CSV remains temporarily on the local server. Reports are downloadable via Export JSON. See docs/interface.md.
+
+
+## Market Data Crew — ask for a price (v0.4)
+
+The chat can answer "Qual é o preço da NVIDIA?" by automatically resolving NVIDIA -> NVDA, querying Yahoo Finance (unofficial quote endpoint), and displaying price, currency, source and timestamp. The workbench opens a contextual **Quote** tab, with provider results and a recent chart when available.
+
+For crypto ("Qual o preço do Bitcoin?"), the Market Data Orchestrator queries **Binance Spot** via its public official REST API (BTCUSDT) alongside Yahoo Finance (BTC-USD). USD and USDT are never silently averaged.
+
+A specialized TradingView provider adapter is also included but requires an authorized **local read-only** adapter. TradingView's charting datafeed library is not a public quote service. No credentials or private TradingView endpoints are used. See [Market Data Crew documentation](docs/market_data.md).
+
+For real market prices use **Live** mode; Demo intentionally cannot return real quotes. The first online tests depend on each vendor's availability and may fail due to rate limits or network restrictions. The system must show source failures, not invent prices.

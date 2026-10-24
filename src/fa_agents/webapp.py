@@ -20,11 +20,12 @@ from .agents import Services
 from .catalog import SPECIALISTS, choose_agents
 from .graph import build_graph
 from .llm import explain
-from .models import AssetClass, ResearchReport, ResearchRequest
+from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv
+from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
 
 WEB_DIR = Path(__file__).parent / "web"
-app = FastAPI(title="FA Agent Research Workbench", version="0.3.0",
+app = FastAPI(title="FA Agent Research Workbench", version="0.4.0",
               docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=str(WEB_DIR)), name="static")
 _tmp = tempfile.TemporaryDirectory(prefix="fa_agent_web_")
@@ -94,6 +95,11 @@ def capabilities():
         "classes": [cls.value for cls in AssetClass],
         "llm_configured": has_llm,
         "sec_configured": "@" in os.getenv("SEC_USER_AGENT", ""),
+        "quote_providers": [
+            {"id":"yahoo","status":"available_unofficial"},
+            {"id":"binance","status":"available_official"},
+            {"id":"tradingview","status":"adapter_configured" if os.getenv("FA_TRADINGVIEW_QUOTE_ADAPTER_URL") else "adapter_not_configured"},
+        ],
         "mode": "local_only",
     }
 
@@ -123,6 +129,8 @@ async def upload_prices(file: UploadFile = File(...)):
 
 @app.post("/api/analyze")
 def analyze(payload: AnalyzeInput):
+    if is_price_question(payload.question):
+        return _answer_market_quote(payload)
     if payload.mode == "demo" and payload.symbol != "DEMO":
         raise HTTPException(400, "Demo mode accepts only the synthetic DEMO asset.")
     if payload.mode == "demo" and payload.llm:
@@ -172,3 +180,60 @@ def _coverage_answer(report: ResearchReport) -> str:
     if report.data_mode == "demo":
         lines.append("DEMO DATA: These are synthetic values, not real market information.")
     return "\n\n".join(lines)
+
+
+def _answer_market_quote(payload: AnalyzeInput):
+    """Route a simple price question to provider specialists, not the full FA graph."""
+    if payload.mode == "demo":
+        raise HTTPException(400, "Cotação real requer modo Live. Selecione Live antes de perguntar.")
+    try:
+        ticker, asset_class = extract_symbol(
+            payload.question, payload.symbol, payload.asset_class.value
+        )
+        comparison = MarketDataOrchestrator().get_quote(ticker, asset_class)
+        reports=[]
+        for attempt in comparison.attempts:
+            if attempt.quote:
+                quote = attempt.quote
+                reports.append(AgentResult(
+                    agent_id="quote_" + attempt.provider, status="completed",
+                    summary=f"{quote.instrument}, {quote.venue}: {quote.price} {quote.currency}"
+                            f" ({quote.at.isoformat()})",
+                    metrics={
+                        "price": quote.price, "currency": quote.currency, "symbol": quote.symbol,
+                        "venue": quote.venue, "quote_time": quote.at.isoformat(),
+                    },
+                    evidence=[Evidence(
+                        source_id="quote-" + attempt.provider + "-" + quote.symbol,
+                        source_name=attempt.provider, source_url=quote.source_url,
+                        retrieved_at=quote.retrieved_at, observed_at=quote.at,
+                        text_excerpt=quote.caveat,
+                    )],
+                    limitations=[quote.caveat],
+                ))
+            else:
+                reports.append(AgentResult(
+                    agent_id="quote_" + attempt.provider, status="failed",
+                    summary=f"{attempt.provider} did not return a usable market quote.",
+                    limitations=[attempt.error or "No quote available."],
+                ))
+        request=ResearchRequest(
+            symbol=ticker, asset_class=asset_class, question=payload.question,
+            horizon=payload.horizon,
+        )
+        selected=comparison.selected
+        report=ResearchReport(
+            request=request, status=("partial" if selected and len(reports)>1 and any(
+                r.status!="completed" for r in reports) else "completed" if selected else "not_ready"),
+            data_mode="live", planned_agents=[r.agent_id for r in reports], results=reports,
+            market_quote=comparison,
+            summary=(f"Latest available quote from {selected.provider.upper()} for "
+                     f"{selected.symbol}; other provider attempts shown separately."
+                     if selected else f"No usable quote from configured market sources for {ticker}."),
+            warnings=[r.summary for r in reports if r.status=="failed"],
+        )
+        return {"report":report.model_dump(mode="json"),
+                "answer":quote_answer(comparison),
+                "selected_agents":report.planned_agents}
+    except (ProviderError, ValueError, RuntimeError) as exc:
+        raise HTTPException(422, str(exc)) from exc

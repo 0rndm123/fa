@@ -36,8 +36,8 @@ $("question").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.p
 function agents(){return state.report?.results||[]}
 function agent(id){return agents().find(x=>x.agent_id===id)||null}
 function sources(){const seen=new Set(),items=[];agents().forEach(a=>(a.evidence||[]).forEach(e=>{const key=e.source_id+"|"+e.source_url;if(seen.has(key))return;seen.add(key);items.push({...e,agent:a.agent_id})}));return items}
-function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
-function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
+function renderReport(){const r=state.report;if(!r)return;$("downloadReport").disabled=false;$("resultTitle").textContent=r.request.symbol+" · Research analysis";$("resultSubtitle").textContent=(r.data_mode==="demo"?"SYNTHETIC DEMO":"Live research")+" · "+r.generated_at.slice(0,19).replace("T"," ")+" UTC · "+agents().length+" specialists";$("reportBadge").textContent=r.status.toUpperCase().replaceAll("_"," ");$("reportBadge").className="status-pill "+(r.status==="completed"?"good":r.status==="partial"?"warn":"");if(r.warnings?.length)showError(r.warnings.join("\n"));else hideError();$("emptyState").classList.add("hidden");$("reportArea").classList.remove("hidden");const tabs=[...(r.market_quote?[["quote","Quote"]]:[]),["overview","Overview"],...(agent("financial_data")?.observations?.length||agent("fundamental")?.metrics?[["financial","Financials"]]:[]),...(agent("technical")?[["technical","Technical"]]:[]),...(sources().length?[["sources","Sources"]]:[]),["agents","Specialists"],["json","JSON"]];state.tabs=tabs;if(r.market_quote)state.activeTab="quote";else if(!tabs.some(x=>x[0]===state.activeTab))state.activeTab="overview";const nav=clear($("tabs"));tabs.forEach(([id,text])=>{const n=el("button","tab",text);n.type="button";n.setAttribute("role","tab");n.dataset.id=id;n.onclick=()=>{state.activeTab=id;renderTab()};nav.appendChild(n)});renderTab()}
+function renderTab(){for(const node of $("tabs").children)node.setAttribute("aria-selected",node.dataset.id===state.activeTab?"true":"false");const parent=clear($("tabContent"));switch(state.activeTab){case"quote":renderQuote(parent);break;case"overview":renderOverview(parent);break;case"financial":renderFinancial(parent);break;case"technical":renderTechnical(parent);break;case"sources":renderSources(parent);break;case"agents":renderAgents(parent);break;case"json":renderJSON(parent);break}}
 function renderOverview(parent){const lead=el("section","report-lead");lead.appendChild(el("h3","","Research summary"));paragraph(lead,state.report.summary,"");parent.appendChild(lead);if(state.report.llm_commentary){title(parent,"AI evidence commentary");const b=el("section","report-lead");paragraph(b,state.report.llm_commentary,"");parent.appendChild(b)}title(parent,"Research coverage");const counts={completed:0,partial:0,no_data:0,failed:0,not_implemented:0};agents().forEach(x=>counts[x.status]=(counts[x.status]||0)+1);const grid=el("div","kpi-grid");append(grid,valueRow("Completed",counts.completed),valueRow("Partial",counts.partial),valueRow("Unavailable",counts.no_data+counts.failed+counts.not_implemented),valueRow("Source records",sources().length));parent.appendChild(grid);const metrics=agent("fundamental")?.metrics||agent("financial_data")?.metrics;if(metrics){title(parent,"Key financial metrics");const g=el("div","kpi-grid");["revenue_usd","annual_revenue_growth_pct","net_margin_pct","fcf_proxy_usd"].forEach(k=>{if(metrics[k]!==undefined)g.appendChild(valueRow(k,metrics[k]))});if(g.childElementCount)parent.appendChild(g)}title(parent,"Specialist outcomes");parent.appendChild(table(["Specialist","Status","Summary"],agents().map(x=>[x.agent_id,x.status,x.summary||x.limitations?.[0]||"—"])));if(state.report.warnings?.length){title(parent,"Warnings");const box=section("Coverage limits"),ul=el("ul");state.report.warnings.forEach(x=>ul.appendChild(el("li","",x)));box.appendChild(ul);parent.appendChild(box)}}
 function compact(v){const abs=Math.abs(v);if(abs>=1e9)return(v/1e9).toFixed(1)+"B";if(abs>=1e6)return(v/1e6).toFixed(1)+"M";if(abs>=1e3)return(v/1e3).toFixed(1)+"K";return v.toFixed(1)}
 function drawLineChart(points){const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 700 250");svg.setAttribute("class","chart");svg.setAttribute("role","img");svg.setAttribute("aria-label","Numeric time series");const values=points.map(p=>Number(p.y));if(!points.length||values.some(x=>!Number.isFinite(x)))return el("div","empty-chart","No numeric history");const L=78,R=678,T=22,B=207;let lo=Math.min(...values),hi=Math.max(...values);if(lo===hi){lo-=Math.max(1,Math.abs(lo)*.1);hi+=Math.max(1,Math.abs(hi)*.1)}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const X=i=>L+(points.length===1?.5:i/(points.length-1))*(R-L),Y=v=>B-(v-lo)/(hi-lo)*(B-T);const line=(a,b,c,d)=>{const n=document.createElementNS(NS,"line");Object.entries({x1:a,y1:b,x2:c,y2:d}).forEach(([key,v])=>n.setAttribute(key,String(v)));svg.appendChild(n)};const text=(x,y,s,anchor="start")=>{const n=document.createElementNS(NS,"text");n.setAttribute("x",x);n.setAttribute("y",y);n.setAttribute("text-anchor",anchor);n.textContent=s;svg.appendChild(n)};for(let i=0;i<=4;i++){const y=T+i*(B-T)/4;line(L,y,R,y);text(L-9,y+3,compact(hi-i*(hi-lo)/4),"end")}text(L,B+24,points[0].x);if(points.length>1)text(R,B+24,points[points.length-1].x,"end");const poly=document.createElementNS(NS,"polyline");poly.setAttribute("points",points.map((p,i)=>X(i).toFixed(1)+","+Y(Number(p.y)).toFixed(1)).join(" "));svg.appendChild(poly);if(points.length<=24)points.forEach((p,i)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",X(i));c.setAttribute("cy",Y(Number(p.y)));c.setAttribute("r",3.5);c.setAttribute("fill","#a8d6ff");svg.appendChild(c)});return svg}
@@ -48,3 +48,38 @@ function renderAgents(parent){agents().forEach(a=>{const details=el("details","a
 function renderJSON(parent){const box=section("Structured report");box.appendChild(el("pre","json-block",JSON.stringify(state.report,null,2)));parent.appendChild(box)}
 $("downloadReport").onclick=()=>{if(!state.report)return;const blob=new Blob([JSON.stringify(state.report,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=el("a");a.href=url;a.download="fa_"+state.report.request.symbol+"_"+Date.now()+".json";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)};
 restoreHistory();loadCapabilities();
+
+
+function renderQuote(parent){
+  const result=state.report?.market_quote;
+  if(!result)return;
+  const quote=result.selected;
+  if(!quote){paragraph(parent,"No confirmed quote was returned by the selected market providers.");}
+  else{
+    const card=el("section","report-lead");
+    card.appendChild(el("h3","",quote.instrument+" · "+quote.symbol));
+    card.appendChild(el("h1","",fmt(quote.price)+" "+quote.currency));
+    paragraph(card,quote.venue+" · "+quote.provider.toUpperCase()+" · "+
+      new Date(quote.at).toLocaleString("en-GB",{timeZone:"UTC"})+" UTC");
+    paragraph(card,quote.caveat);
+    parent.appendChild(card);
+    if(quote.history?.length){
+      const chart=section("Recent vendor-provided price observations");
+      chart.appendChild(drawLineChart(quote.history.map(p=>({x:p.at.slice(0,16),y:p.price}))));
+      paragraph(chart,"Not necessarily a real-time or tradeable price.");
+      parent.appendChild(chart);
+    }
+  }
+  title(parent,"Market data specialists");
+  parent.appendChild(table(["Provider","Instrument","Venue","Last price","Currency","Timestamp UTC","Result"],
+    (result.attempts||[]).map(a=>[
+      a.provider.toUpperCase(),a.symbol,a.quote?.venue||"—",
+      a.quote?.price??"—",a.quote?.currency||"—",
+      a.quote?.at?.replace("T"," ").slice(0,19)||"—",
+      a.status==="ok"?"Retrieved":a.error||a.status
+    ])));
+  paragraph(parent,
+    "Yahoo Finance uses an unofficial endpoint; Binance Spot uses public REST market data. "+
+    "TradingView requires a separately configured authorized adapter. "+
+    "Prices from USD and USDT pairs are shown separately and are never averaged.");
+}

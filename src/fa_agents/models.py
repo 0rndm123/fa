@@ -70,8 +70,44 @@ class AgentResult(BaseModel):
     limitations: list[str] = Field(default_factory=list)
 
 
+class PricePoint(BaseModel):
+    at: datetime
+    price: float
+
+
+class MarketQuote(BaseModel):
+    provider: str
+    symbol: str
+    instrument: str
+    venue: str
+    currency: str
+    price: float
+    at: datetime
+    retrieved_at: datetime
+    timestamp_kind: str
+    source_url: str
+    caveat: str
+    previous_close: float | None = None
+    history: list[PricePoint] = Field(default_factory=list)
+
+
+class ProviderAttempt(BaseModel):
+    provider: str
+    status: Literal["ok", "failed", "not_configured"] = "failed"
+    symbol: str
+    quote: MarketQuote | None = None
+    error: str | None = None
+
+
+class QuoteResult(BaseModel):
+    requested_symbol: str
+    asset_class: str
+    selected: MarketQuote | None = None
+    attempts: list[ProviderAttempt] = Field(default_factory=list)
+
+
 class ResearchReport(BaseModel):
-    schema_version: str = "0.3"
+    schema_version: str = "0.4"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus
@@ -79,5 +115,6 @@ class ResearchReport(BaseModel):
     planned_agents: list[str] = Field(default_factory=list)
     results: list[AgentResult] = Field(default_factory=list)
     summary: str = ""
+    market_quote: QuoteResult | None = None
     llm_commentary: str | None = None
     warnings: list[str] = Field(default_factory=list)
