@@ -18,7 +18,7 @@ jobs:
       - name: Compile
         run: python -m compileall -q src tests
       - name: JavaScript syntax
-        run: node --check src/fa_agents/web/app.js
+        run: node --check src/fa_agents/web/app.js && node --check src/fa_agents/web/interactive_chart.js
       - name: Unit and API tests
         run: python -m pytest -q
       - name: Demo smoke test (offline)

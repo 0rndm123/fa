@@ -204,10 +204,21 @@ def news(request: ResearchRequest, svc: Services) -> AgentResult:
 
 
 def technical(request: ResearchRequest, svc: Services) -> AgentResult:
+    market_info = None
     if not svc.prices_csv:
-        return AgentResult(agent_id="technical", status="no_data",
-                           limitations=["Supply --prices CSV with date,close columns."])
-    series = prices_from_csv(svc.prices_csv, request.as_of)
+        if svc.demo:
+            return AgentResult(agent_id="technical", status="no_data",
+                               limitations=["In Demo mode supply a CSV with date,close columns."])
+        from .market_data import MarketDataOrchestrator
+        info = MarketDataOrchestrator().get_quote(request.symbol,request.asset_class.value)
+        market_info=info.selected
+        if not market_info or not market_info.history:
+            failures="; ".join(at.error or at.provider for at in info.attempts if at.status!="ok")
+            return AgentResult(agent_id="technical", status="no_data",
+                               limitations=["No verified timed price series returned by market providers. "+failures])
+        series=[(bar.at.isoformat(),bar.price) for bar in market_info.history]
+    else:
+        series = prices_from_csv(svc.prices_csv, request.as_of)
     if not series:
         return AgentResult(agent_id="technical", status="no_data",
                            limitations=["No observations at requested date."])
@@ -223,21 +234,40 @@ def technical(request: ResearchRequest, svc: Services) -> AgentResult:
             metrics[f"sma{window}"] = round(avg, 6)
             direction = "above" if last[1] > avg else "below" if last[1] < avg else "equal to"
             claims.append(f"Latest close {direction} SMA{window}.")
+    if market_info:
+        metrics["timeframe"] = market_info.bar_interval or "1h"
+        # These are intraday market observations, not daily trading sessions.
+        for window in (20,50,200):
+            if "sma"+str(window) in metrics:
+                metrics["sma"+str(window)+"_1h"]=metrics.pop("sma"+str(window))
+        metrics["last_date"]=last[0]
     if len(values) >= 2:
         metrics["last_return_pct"] = round((values[-1] / values[-2] - 1) * 100, 4)
+    if len(values) >= 15:
+        diffs=[values[i]-values[i-1] for i in range(len(values)-14,len(values))]
+        gains=sum(max(0,d) for d in diffs)/14
+        losses=sum(max(0,-d) for d in diffs)/14
+        rsi=100 if losses==0 else 100-(100/(1+gains/losses))
+        metrics["rsi14_simple"]=round(rsi,2)
     return AgentResult(
         agent_id="technical", status="partial",
         observations=[FinancialObservation(metric="close", period_end=day, value=price,
-                                           unit="unspecified", source_id="local-prices")
+                                           unit=market_info.currency if market_info else "unspecified",
+                                           source_id="market-prices" if market_info else "local-prices")
                       for day, price in series[-250:]],
-        summary="Deterministic daily price analysis from a supplied CSV.",
+        summary=("Deterministic intraday price observations (hourly bars) from "+market_info.provider
+                 if market_info else "Deterministic daily price analysis from a supplied CSV."),
         claims=claims, metrics=metrics,
-        evidence=[evidence("local-prices", "Local CSV - unverified", "https://example.com/local-file",
+        evidence=[evidence("market-prices" if market_info else "local-prices",
+                           market_info.provider if market_info else "Local CSV - unverified",
+                           market_info.source_url if market_info else "https://example.com/local-file",
                            observed=datetime.fromisoformat(last[0]).replace(tzinfo=timezone.utc),
                            demo=svc.demo, excerpt=f"{len(values)} observations; latest {last[0]}")],
         limitations=[
             "No verification of provenance, adjustment for splits/dividends, exchange or currency.",
-            "SMAs computed on trading observations, not calendar days. No backtest or trade signals.",
+            "Moving averages use available observed bars, not necessarily adjusted daily closing prices.",
+            "RSI14 is a simple 14-period average, not Wilder-smoothed RSI and must not be confused with TradingView RSI.",
+            "No backtest or buy/sell trade signal was executed.",
         ],
     )
 

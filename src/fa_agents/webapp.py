@@ -149,8 +149,11 @@ def analyze(payload: AnalyzeInput):
         if path is None or not path.is_file():
             raise HTTPException(404, "Price upload not found. Upload the file again.")
     try:
+        resolved_symbol, resolved_class = (extract_symbol(
+            payload.question, payload.symbol, payload.asset_class.value)
+            if payload.mode == "live" else (payload.symbol, payload.asset_class.value))
         request = ResearchRequest(
-            symbol=payload.symbol, asset_class=payload.asset_class,
+            symbol=resolved_symbol, asset_class=resolved_class,
             exchange=payload.exchange, question=payload.question,
             horizon=payload.horizon, include_agents=payload.agents,
         )
@@ -173,8 +176,20 @@ def _coverage_answer(report: ResearchReport) -> str:
     """Explicit non-LLM chat answer based on tool results, with no invented analysis."""
     lines = [report.summary]
     for item in report.results:
-        if item.claims and item.status in {"completed", "partial"}:
-            lines.append(f"{item.agent_id}: " + " ".join(item.claims[:3]))
+        if item.status in {"completed", "partial"}:
+            facts = []
+            for name, value in item.metrics.items():
+                if name in {"company", "sector_description", "sic"} or name.endswith("_period"):
+                    continue
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    facts.append(f"{name.replace('_',' ')} = {value:,.3f}")
+            if facts or item.claims:
+                lines.append(f"{item.agent_id}: " + "; ".join(facts[:8])+
+                             (". " if facts else "") + " ".join(item.claims[:3]))
+            elif item.summary:
+                lines.append(f"{item.agent_id}: {item.summary}")
+            if item.agent_id in {"governance","competition","industry_context"} and item.limitations:
+                lines.append(item.agent_id+" — "+item.limitations[0])
     if report.warnings:
         lines.append("Limitations: " + "; ".join(report.warnings[:4]))
     if report.data_mode == "demo":

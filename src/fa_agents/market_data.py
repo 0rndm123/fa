@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from math import isfinite
 from urllib.parse import quote, urlencode, urlparse
 
-from .models import MarketQuote, ProviderAttempt, QuoteResult, PricePoint
+from .models import MarketQuote, ProviderAttempt, QuoteResult, PricePoint, OHLCBar
 from .providers import ProviderError, fetch_bytes, now
 
 
@@ -62,7 +62,9 @@ _ALIASES = {
 }
 _REQUEST_WORDS = {"price", "quote", "stock", "last", "current", "today", "preco",
                   "cotacao", "cotacoes", "quanto", "qual", "hoje", "agora", "atual",
-                  "acao", "acoes", "empresa", "valor", "ticker", "the", "what", "is"}
+                  "acao", "acoes", "empresa", "valor", "ticker", "the", "what", "is", 
+                  "rsi","ema","sma","macd","ohlc","fcf","ebitda","roic","sec","sic",
+                  "divida","debt","liquidity","governance","financials","technical"}
 _Q_RE = re.compile(
     r"\b(preco|cotacao|cotacoes|price|quote|trading at|quanto custa|"
     r"quanto vale|quanto esta a valer|what is .* trading at)\b"
@@ -156,12 +158,29 @@ class YahooQuoteAgent:
                         history.append(PricePoint(at=_utc_unix(t),price=float(price)))
             except (TypeError, ValueError, KeyError):
                 history=[]
+            bars_ohlc = []
+            quote_rows = item.get("indicators", {}).get("quote", [{}])[0]
+            times = item.get("timestamp", [])
+            for index, t in enumerate(times):
+                try:
+                    o = float(quote_rows["open"][index])
+                    h = float(quote_rows["high"][index])
+                    l = float(quote_rows["low"][index])
+                    c = float(quote_rows["close"][index])
+                    if not all(_positive(x) for x in (o,h,l,c)) or not l<=min(o,c)<=max(o,c)<=h:
+                        continue
+                    stamp_bar = _utc_unix(t)
+                    if stamp_bar <= dt:
+                        bars_ohlc.append(OHLCBar(at=stamp_bar,open=o,high=h,low=l,close=c))
+                except (KeyError,IndexError,ValueError,TypeError):
+                    continue
             return MarketQuote(
                 provider=self.id, symbol=actual,
                 instrument=str(meta.get("longName") or meta.get("shortName") or actual),
                 venue=str(meta.get("fullExchangeName") or meta.get("exchangeName") or "Unspecified"),
                 currency=currency, price=float(value), at=dt, retrieved_at=now(),
                 timestamp_kind="regular_market_quote", history=history[-120:],
+                bars=bars_ohlc[-120:],bar_interval="1h",
                 previous_close=previous,
                 source_url="https://finance.yahoo.com/quote/"+quote(symbol,safe="")+"/",
                 caveat="Unofficial Yahoo chart endpoint; feed delay and live status not verified.",
@@ -192,11 +211,32 @@ class BinanceSpotQuoteAgent:
             at = _utc_unix(data["closeTime"], "milliseconds")
             prev24 = data.get("prevClosePrice")
             prev24 = float(prev24) if _positive(prev24) else None
+            bars_ohlc = []
+            kline_url = ("https://data-api.binance.vision/api/v3/klines?"+
+                         urlencode({"symbol":symbol, "interval":"1h","limit":120}))
+            try:
+                kline_raw = self.loader(kline_url) if self.loader else fetch_bytes(
+                    kline_url,"FA-Agent/0.5 research read-only"
+                )
+                kline_data=json.loads(kline_raw)
+                if isinstance(kline_data,list):
+                    for row in kline_data:
+                        try:
+                            start=_utc_unix(row[0],"milliseconds")
+                            o,h,l,c=map(float,(row[1],row[2],row[3],row[4]))
+                            if (start<=at and all(_positive(v) for v in (o,h,l,c))
+                                    and l<=min(o,c)<=max(o,c)<=h):
+                                bars_ohlc.append(OHLCBar(at=start,open=o,high=h,low=l,close=c))
+                        except (KeyError,IndexError,ValueError,TypeError):
+                            continue
+            except (ProviderError,ValueError,TypeError,KeyError):
+                bars_ohlc=[]
             return MarketQuote(
                 provider=self.id, symbol=symbol, instrument=symbol,
                 venue="Binance Spot", currency=_currency(symbol), price=float(value),
                 at=at, retrieved_at=now(), timestamp_kind="rolling_24h_window_end",
-                previous_close=prev24,
+                previous_close=prev24, bars=bars_ohlc[-120:],bar_interval="1h",
+                history=[PricePoint(at=b.at,price=b.close) for b in bars_ohlc[-120:]],
                 source_url="https://www.binance.com/en/trade/"+quote(symbol[:-4],safe="")+"_USDT"
                 if symbol.endswith("USDT") else "https://www.binance.com/en/markets",
                 caveat="24-hour rolling window. closeTime is the window end, not verified last-trade time.",

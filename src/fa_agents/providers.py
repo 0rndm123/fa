@@ -190,8 +190,11 @@ class DemoSEC:
                                         for k, (a, b) in tags.items()}}}
 
     def submissions(self, issuer: Issuer) -> dict:
-        return {"filings": {"recent": {"form": ["10-K"], "filingDate": ["2025-02-10"],
-                   "accessionNumber": ["SYNTHETIC"], "primaryDocument": ["demo.htm"]}}}
+        return {"sic": "7372", "sicDescription": "Prepackaged Software (synthetic test classification)",
+                "filings": {"recent": {"form": ["10-K", "DEF 14A"],
+                    "filingDate": ["2025-02-10", "2025-03-15"],
+                    "accessionNumber": ["SYNTHETIC", "SYNTHETIC-PROXY"],
+                    "primaryDocument": ["demo.htm","demo-proxy.htm"]}}}
 
 
 class DemoNews:

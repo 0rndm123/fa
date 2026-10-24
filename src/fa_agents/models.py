@@ -75,6 +75,14 @@ class PricePoint(BaseModel):
     price: float
 
 
+class OHLCBar(BaseModel):
+    at: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+
+
 class MarketQuote(BaseModel):
     provider: str
     symbol: str
@@ -89,6 +97,8 @@ class MarketQuote(BaseModel):
     caveat: str
     previous_close: float | None = None
     history: list[PricePoint] = Field(default_factory=list)
+    bars: list[OHLCBar] = Field(default_factory=list)
+    bar_interval: str | None = None
 
 
 class ProviderAttempt(BaseModel):
@@ -107,7 +117,7 @@ class QuoteResult(BaseModel):
 
 
 class ResearchReport(BaseModel):
-    schema_version: str = "0.4"
+    schema_version: str = "0.5"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus

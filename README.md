@@ -130,3 +130,19 @@ For crypto ("Qual o preço do Bitcoin?"), the Market Data Orchestrator queries *
 A specialized TradingView provider adapter is also included but requires an authorized **local read-only** adapter. TradingView's charting datafeed library is not a public quote service. No credentials or private TradingView endpoints are used. See [Market Data Crew documentation](docs/market_data.md).
 
 For real market prices use **Live** mode; Demo intentionally cannot return real quotes. The first online tests depend on each vendor's availability and may fail due to rate limits or network restrictions. The system must show source failures, not invent prices.
+
+
+## Financial, corporate and technical specialist crews (v0.5)
+
+The chat automatically dispatches equity questions about profitability/revenue, debt/liquidity, governance, sector and competitors to dedicated read-only specialist functions, without querying every agent unnecessarily. Explicit manual specialist selection takes priority.
+
+- Financial Performance: annual 10-K operating growth, margins and free cash flow proxy.
+- Debt & Liquidity: available cash, current assets/liabilities, debt components and cautious ratios.
+- Governance: recent proxy/10-K SEC documents with dated source references. This is document *discovery*, NOT a board or executive-pay assessment yet.
+- Industry Context: SEC SIC sector classification and a limited 10-K excerpt if accessible. Not a full sector outlook.
+- Competition: a SEC 10-K excerpt mentioning competition, when retrievable. Not a validated company or peer ranking.
+- Technical: CSV-based daily figures or automatically sourced intraday bars (Yahoo/Binance), with labeled hourly moving averages and a *simple* RSI14 variant (not Wilder smoothing).
+
+The quote tab now has an interactive chart. Toggle between **Line** and **Candles** when authentic OHLC bars exist, wheel to zoom, drag to pan, hover for values, and reset. The chart never fabricates OHLC candles from closing prices.
+
+Financial sources are currently limited to SEC companies. Extended peer benchmarking, qualitative governance analysis and independently supported market studies remain future phases.
