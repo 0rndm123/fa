@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
-from .models import AgentResult, Evidence, ResearchRequest
+from .models import AgentResult, Evidence, ResearchRequest, FinancialObservation
 from .providers import SEC, NewsRSS, DemoSEC, DemoNews, ProviderError, annual, prices_from_csv, now, cutoff_at
 
 
@@ -33,6 +33,58 @@ def evidence(identifier, name, url, *, published=None, observed=None, demo=False
     return Evidence(source_id=identifier, source_name=name, source_url=url,
                     retrieved_at=now(), published_at=published,
                     observed_at=observed, is_synthetic=demo, text_excerpt=excerpt)
+
+
+
+def financial_data(request: ResearchRequest, svc: Services) -> AgentResult:
+    """Retrieve annual US SEC company financial time series, with original-source links."""
+    if request.asset_class.value != "equity":
+        return AgentResult(agent_id="financial_data", status="no_data",
+                           limitations=["SEC annual company financial data currently supports US issuers only."])
+    sec = svc.sec_reader()
+    issuer = sec.resolve(request.symbol)
+    facts = sec.facts(issuer)
+    tags = {
+        "revenue": ("RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet"),
+        "net_income": ("NetIncomeLoss",),
+        "operating_cash_flow": ("NetCashProvidedByUsedInOperatingActivities",),
+        "capex": ("PaymentsToAcquirePropertyPlantAndEquipment",),
+    }
+    records: list[FinancialObservation] = []
+    sources: list[Evidence] = []
+    latest: dict[str, float | str | None] = {"company": issuer.name}
+    src = ("https://example.com/synthetic-sec-facts" if svc.demo else
+           f"https://data.sec.gov/api/xbrl/companyfacts/CIK{issuer.cik10}.json")
+    for metric, candidates in tags.items():
+        rows = annual(facts, candidates, request.as_of, limit=6)
+        for row in rows:
+            identifier = f"xbrl-{row['tag']}-{row['end']}"
+            records.append(FinancialObservation(
+                metric=metric, period_end=row["end"], value=row["value"],
+                unit="USD", source_id=identifier,
+            ))
+            sources.append(evidence(
+                identifier, "SYNTHETIC SEC FIXTURE" if svc.demo else "SEC XBRL",
+                src,
+                published=datetime.fromisoformat(row["filed"]).replace(tzinfo=timezone.utc),
+                observed=datetime.fromisoformat(row["end"]).replace(tzinfo=timezone.utc),
+                demo=svc.demo,
+                excerpt=f"{metric} {row['end']}: {row['value']:,.0f} USD",
+            ))
+        if rows:
+            latest[metric + "_usd"] = rows[0]["value"]
+            latest[metric + "_period"] = rows[0]["end"]
+    return AgentResult(
+        agent_id="financial_data", status="completed" if records else "no_data",
+        summary=f"Retrieved {len(records)} annual SEC financial observations for {issuer.name}.",
+        metrics=latest,
+        observations=sorted(records, key=lambda r: (r.metric, r.period_end)),
+        evidence=sources,
+        limitations=[
+            "US SEC 10-K annual USD facts only; no forecasts, other exchanges or verified footnote analysis.",
+            "Periods, amendment dates and accounting definitions may differ between metrics.",
+        ] + (["SYNTHETIC TEST NUMBERS, NOT REAL FINANCIAL DATA."] if svc.demo else []),
+    )
 
 
 def financial(request: ResearchRequest, svc: Services) -> AgentResult:
@@ -212,7 +264,7 @@ def review(results: list[AgentResult], selected: list[str]) -> AgentResult:
 
 
 def run_specialist(name: str, request: ResearchRequest, svc: Services) -> AgentResult:
-    implemented = {"fundamental": financial, "filings": filings, "news": news, "technical": technical}
+    implemented = {"financial_data": financial_data, "fundamental": financial, "filings": filings, "news": news, "technical": technical}
     if name not in implemented:
         return AgentResult(
             agent_id=name, status="not_implemented",
