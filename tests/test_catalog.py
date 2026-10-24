@@ -5,7 +5,7 @@ from fa_agents.models import ResearchRequest
 
 def test_default_routes():
     assert choose_agents(ResearchRequest(symbol="nvda", asset_class="equity")) == [
-        "financial_data", "fundamental", "filings", "news", "technical", "risk"
+        "financial_data", "financial_performance", "debt_liquidity", "fundamental", "filings", "news", "technical", "risk"
     ]
     assert "fundamental" not in choose_agents(ResearchRequest(symbol="BTC", asset_class="crypto"))
 

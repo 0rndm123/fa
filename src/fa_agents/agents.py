@@ -294,7 +294,12 @@ def review(results: list[AgentResult], selected: list[str]) -> AgentResult:
 
 
 def run_specialist(name: str, request: ResearchRequest, svc: Services) -> AgentResult:
-    implemented = {"financial_data": financial_data, "fundamental": financial, "filings": filings, "news": news, "technical": technical}
+    from .company_specialists import SPECIALIST_HANDLERS
+    implemented = {
+        "financial_data": financial_data, "fundamental": financial,
+        "filings": filings, "news": news, "technical": technical,
+        **SPECIALIST_HANDLERS,
+    }
     if name not in implemented:
         return AgentResult(
             agent_id=name, status="not_implemented",

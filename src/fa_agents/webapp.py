@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from .agents import Services
-from .catalog import SPECIALISTS, choose_agents
+from .catalog import SPECIALISTS, choose_agents, select_for_question
 from .graph import build_graph
 from .llm import explain
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
@@ -89,8 +89,8 @@ def capabilities():
         has_llm = False
     return {
         "agents": [{"id": key, "description": value,
-                    "implementation": ("working" if key in {"financial_data", "fundamental"} else
-                        "partial" if key in {"filings", "news", "technical", "risk"} else "planned")}
+                    "implementation": ("working" if key in {"financial_data", "fundamental", "financial_performance"} else
+                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition"} else "planned")}
                    for key, value in SPECIALISTS.items()],
         "classes": [cls.value for cls in AssetClass],
         "llm_configured": has_llm,
@@ -157,7 +157,8 @@ def analyze(payload: AnalyzeInput):
             exchange=payload.exchange, question=payload.question,
             horizon=payload.horizon, include_agents=payload.agents,
         )
-        selected = choose_agents(request)
+        selected = select_for_question(request)
+        request = request.model_copy(update={"include_agents": selected})
         services = Services.build(payload.mode, str(path) if path else None)
         state = build_graph(services).invoke({"request": request.model_dump(mode="json")})
         report = ResearchReport.model_validate(state["report"])

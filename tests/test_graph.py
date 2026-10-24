@@ -27,7 +27,9 @@ def test_end_to_end_demo_has_real_calculations():
     assert result["news"]["status"] == "partial"
     assert result["technical"]["status"] == "no_data"
     assert result["risk"]["status"] == "partial"
-    assert len(report["results"]) == 6
+    assert len(report["results"]) == 8
+    assert result["financial_performance"]["status"] == "completed"
+    assert result["debt_liquidity"]["status"] == "no_data"
     assert all(x["is_synthetic"] for x in result["fundamental"]["evidence"])
     assert any("SYNTHETIC" in x for x in report["warnings"])
 
