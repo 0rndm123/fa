@@ -1,41 +1,21 @@
-# Roadmap | progressive delivery
+# FA_Agent implementation roadmap
 
-## Stage 0 — Repository skeleton [created]
+## Delivered in v0.2
+- Typed request/response/evidence schemas, independent repository and 12-agent catalogue.
+- LangGraph specialist fan-out, deterministic review, synthesis and CLI.
+- Working source adapters to SEC annual company facts, SEC filings metadata and current Google News RSS headlines.
+- CSV-based technical computations and explicit source/temporal limitations.
+- Synthetic no-key demo with automated tests and GitHub Actions.
+- Optional LangChain OpenAI narrative on the already collected evidence.
 
-- [x] Independent project and Python package layout
-- [x] Typed contracts, specialist registry and asset-aware routing
-- [x] LangGraph plan / parallel worker / validate / synthesize *scaffold*
-- [x] CLI and structural tests
-- [x] Extension ports for data providers
-- [ ] Real source retrieval / live research / analytical outputs
+## Next functional increments
+1. Extract/read filings text including management discussion and footnotes, verify source passages.
+2. Distinct financial subagents: profitability, liquidity, debt, cash generation and valuation; avoid duplicated data retrieval.
+3. Real sector and peer research, common issuer identifiers and industry taxonomies.
+4. Live technical OHLCV provider with adjusted-price metadata, configurable timeframes, indicators, swing research.
+5. Independent risk/challenger research, scenarios, contradictions and evidence traceability.
+6. Report renderer, comparisons, historical memory, caching and budget controls.
+7. Standalone versioned REST API, then optional read-only adapters to SysTrd or other apps.
+8. Point-in-time thesis and strategy evaluation without hindsight or selection biases.
 
-## Stage 1 — First factual vertical slice
-
-- [ ] Identity resolution, starting with listed equities and ambiguous tickers
-- [ ] Online source adapter, dated search results, source-quality tagging and caching
-- [ ] Implement News and Filings/Fundamental specialists with structured output
-- [ ] Independent Risk/Challenger research plus source-linked synthesis
-- [ ] Tests with known fixtures, contradiction and missing-source scenarios
-- [ ] End-to-end report for one equity without manual enrichment
-
-## Stage 2 — Deeper analysis
-
-- [ ] Valuation, industry and macro specialists
-- [ ] Configurable LangChain model factory and prompt versioning
-- [ ] Real retries, budgets, observability, run history, persistence and checkpoints
-- [ ] User-facing report / CLI improvements and optional standalone API
-
-## Stage 3 — Multi-asset and external interoperability
-
-- [ ] Crypto, ETF, positioning/sentiment and technical specialists
-- [ ] Read-only SysTrd adapter through a versioned service API, no direct table imports
-- [ ] Optional adapters for other applications and data stores
-- [ ] Comparative / portfolio-level research and scheduling
-
-## Stage 4 — Measurement
-
-- [ ] Point-in-time backtesting of **dated theses** and reproducibility
-- [ ] Compare conclusions with realized outcomes without future leakage
-- [ ] Evaluate source reliability, specialist value-add, latency and cost
-
-Implementation stages are priorities, not timelines or commitments.
+A catalogue entry is never considered an implemented agent until tested with real sources and assertions.

@@ -1,10 +1,8 @@
-"""Serializable, provider-neutral public contracts."""
+"""Typed public interface to a standalone financial research engine."""
 from __future__ import annotations
-
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Literal
-
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -23,7 +21,7 @@ class ResearchRequest(BaseModel):
     asset_class: AssetClass
     exchange: str | None = None
     instrument_id: str | None = None
-    question: str = "Provide a source-backed financial analysis of this instrument."
+    question: str = "Provide a source-backed financial research report."
     horizon: Literal["short", "medium", "long"] = "medium"
     as_of: datetime | None = None
     include_agents: list[str] | None = None
@@ -46,6 +44,7 @@ class Evidence(BaseModel):
     published_at: datetime | None = None
     observed_at: datetime | None = None
     text_excerpt: str | None = None
+    is_synthetic: bool = False
 
 
 AgentStatus = Literal["completed", "partial", "no_data", "not_implemented", "failed"]
@@ -57,14 +56,19 @@ class AgentResult(BaseModel):
     status: AgentStatus
     summary: str = ""
     claims: list[str] = Field(default_factory=list)
+    metrics: dict[str, float | str | None] = Field(default_factory=dict)
     evidence: list[Evidence] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
 
 
 class ResearchReport(BaseModel):
-    schema_version: str = "0.1"
+    schema_version: str = "0.2"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus
+    data_mode: Literal["live", "demo"] = "live"
+    planned_agents: list[str] = Field(default_factory=list)
     results: list[AgentResult] = Field(default_factory=list)
+    summary: str = ""
+    llm_commentary: str | None = None
     warnings: list[str] = Field(default_factory=list)

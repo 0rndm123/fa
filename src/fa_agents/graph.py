@@ -1,17 +1,18 @@
-"""LangGraph orchestrator scaffold. It never fabricates agent research."""
+"""Executable LangGraph plan -> parallel specialists -> review -> synthesis."""
 from __future__ import annotations
 
 import operator
 from typing import Annotated, Any, TypedDict
 
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import START, END, StateGraph
 from langgraph.types import Send
 
-from .catalog import SPECIALISTS, choose_agents
-from .models import AgentResult, ResearchReport, ResearchRequest
+from .agents import Services, run_specialist, review
+from .catalog import choose_agents
+from .models import ResearchRequest, AgentResult, ResearchReport
 
 
-class ResearchState(TypedDict, total=False):
+class State(TypedDict, total=False):
     request: dict[str, Any]
     planned_agents: list[str]
     agent_id: str
@@ -20,64 +21,83 @@ class ResearchState(TypedDict, total=False):
     report: dict[str, Any]
 
 
-def plan(state: ResearchState) -> dict[str, Any]:
-    request = ResearchRequest.model_validate(state["request"])
-    return {"planned_agents": choose_agents(request)}
+def plan(state: State) -> dict:
+    return {"planned_agents": choose_agents(ResearchRequest.model_validate(state["request"]))}
 
 
-def dispatch(state: ResearchState) -> str | list[Send]:
-    agents = state["planned_agents"]
-    if not agents:
+def route(state: State) -> str | list[Send]:
+    workers = [a for a in state["planned_agents"] if a != "risk"]
+    if not workers:
         return "validate"
-    return [Send("specialist", {"agent_id": agent_id}) for agent_id in agents]
+    return [Send("specialist", {"agent_id": a, "request": state["request"]}) for a in workers]
 
 
-def specialist(state: ResearchState) -> dict[str, Any]:
-    agent_id = state["agent_id"]
-    if agent_id not in SPECIALISTS:
-        raise ValueError(f"Unknown specialist: {agent_id}")
-    result = AgentResult(
-        agent_id=agent_id,
-        status="not_implemented",
-        summary=f"{SPECIALISTS[agent_id]}: implementation pending.",
-        limitations=["No data was retrieved and no financial analysis was performed."],
-    )
-    return {"results": [result.model_dump(mode="json")]}
-
-
-def validate(state: ResearchState) -> dict[str, Any]:
-    results = [AgentResult.model_validate(item) for item in state.get("results", [])]
+def validate(state: State) -> dict:
+    results = [AgentResult.model_validate(x) for x in state.get("results", [])]
     warnings = []
     if not results:
-        warnings.append("No specialists were selected.")
-    if any(result.status != "completed" for result in results):
-        warnings.append("The selected specialists have not completed verified research.")
+        warnings.append("No evidence-gathering specialists were selected.")
+    for x in results:
+        if x.status == "failed":
+            warnings.append(f"{x.agent_id} failed: {'; '.join(x.limitations)}")
+        if x.status == "not_implemented":
+            warnings.append(f"{x.agent_id} is not implemented.")
     return {"warnings": warnings}
 
 
-def synthesize(state: ResearchState) -> dict[str, Any]:
-    """Emit a truthful execution report; actual evidence synthesis is not built."""
-    results = [AgentResult.model_validate(item) for item in state.get("results", [])]
-    status = "completed" if results and all(r.status == "completed" for r in results) else "not_ready"
-    report = ResearchReport(
-        request=ResearchRequest.model_validate(state["request"]),
-        status=status,
-        results=results,
-        warnings=state.get("warnings", []),
-    )
-    return {"report": report.model_dump(mode="json")}
+def build_graph(services: Services | None = None):
+    services = services or Services.build()
 
+    def specialist(state: State) -> dict:
+        result = run_specialist(state["agent_id"],
+                                ResearchRequest.model_validate(state["request"]), services)
+        return {"results": [result.model_dump(mode="json")]}
 
-def build_graph():
-    """A LangGraph plan/fan-out/aggregate scaffold with no paid services required."""
-    workflow = StateGraph(ResearchState)
-    workflow.add_node("plan", plan)
-    workflow.add_node("specialist", specialist)
-    workflow.add_node("validate", validate)
-    workflow.add_node("synthesize", synthesize)
-    workflow.add_edge(START, "plan")
-    workflow.add_conditional_edges("plan", dispatch, ["specialist", "validate"])
-    workflow.add_edge("specialist", "validate")
-    workflow.add_edge("validate", "synthesize")
-    workflow.add_edge("synthesize", END)
-    return workflow.compile()
+    def risk_review(state: State) -> dict:
+        if "risk" not in state["planned_agents"]:
+            return {}
+        results = [AgentResult.model_validate(x) for x in state.get("results", [])]
+        result = review(results, state["planned_agents"])
+        return {"results": [result.model_dump(mode="json")]}
+
+    def synthesize(state: State) -> dict:
+        request = ResearchRequest.model_validate(state["request"])
+        by_id = {r.agent_id: r for r in
+                 (AgentResult.model_validate(x) for x in state.get("results", []))}
+        results = [by_id[a] for a in state["planned_agents"] if a in by_id]
+        unavailable = sum(r.status in {"failed", "no_data", "not_implemented"} for r in results)
+        partial = sum(r.status == "partial" for r in results)
+        completed = sum(r.status == "completed" for r in results)
+        if not results or completed + partial == 0:
+            status = "not_ready"
+        elif unavailable or partial:
+            status = "partial"
+        else:
+            status = "completed"
+        sources = sum(len(r.evidence) for r in results)
+        warnings = list(state.get("warnings", []))
+        if services.demo:
+            warnings.append("SYNTHETIC DEMO: company and news data are fabricated fixtures.")
+        report = ResearchReport(
+            request=request, status=status, data_mode="demo" if services.demo else "live",
+            planned_agents=state["planned_agents"], results=results,
+            warnings=warnings,
+            summary=(f"{request.symbol}: {completed} completed, {partial} partial, "
+                     f"{unavailable} unavailable specialist(s); {sources} source records. "
+                     "No investment recommendation has been produced."),
+        )
+        return {"report": report.model_dump(mode="json")}
+
+    graph = StateGraph(State)
+    graph.add_node("plan", plan)
+    graph.add_node("specialist", specialist)
+    graph.add_node("validate", validate)
+    graph.add_node("risk_review", risk_review)
+    graph.add_node("synthesize", synthesize)
+    graph.add_edge(START, "plan")
+    graph.add_conditional_edges("plan", route, ["specialist", "validate"])
+    graph.add_edge("specialist", "validate")
+    graph.add_edge("validate", "risk_review")
+    graph.add_edge("risk_review", "synthesize")
+    graph.add_edge("synthesize", END)
+    return graph.compile()

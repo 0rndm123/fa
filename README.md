@@ -1,42 +1,99 @@
-# FA — Financial Analysis Agents
+# FA_Agent | Financial Analysis Research System
 
-Independent, read-only financial research system using Python, LangGraph and LangChain.
+Standalone Python **LangGraph / LangChain** financial research application. Repository: 0rndm123/fa.
+No dependency on SysTrd, its database or any other application. Future integrations use read-only adapters.
 
-**Status:** architecture and executable orchestration scaffold. The specialist agents are intentionally **not yet implemented**. No financial conclusions or invented online research are returned by the scaffold.
+## What actually works (v0.2)
 
-## Objectives
+- LangGraph orchestrator: deterministic asset-aware selection, parallel specialist workers, source-gap review, report synthesis.
+- **Fundamental**: reads **annual 10-K XBRL** from the US SEC and calculates revenue growth, net margin and a free-cash-flow proxy. These metrics are *not* valuation or investment advice.
+- **Filings**: locates up to five filing documents, providing dated original links. Does *not* yet read their content.
+- **News**: Google News RSS headline discovery. Does *not* verify or read full articles.
+- **Technical**: calculates latest close, SMA20, SMA50, SMA200 where possible from user-provided daily CSV. No signal/backtest yet.
+- **Risk**: preliminary rule-based coverage review; independent critical research is not implemented.
+- 12 specialist names in catalog. Unimplemented ones explicitly return not_implemented.
+- Optional LangChain/OpenAI commentary on evidence already collected, **never** a substitute for evidence.
 
-- Analyze equities, ETFs, cryptoassets, commodities, FX and indices through purpose-specific specialist agents.
-- Use an orchestrator to select experts, aggregate evidence, challenge assumptions and synthesize a report.
-- Start independently of SysTrd; connect later via versioned ports/adapters to SysTrd and other applications.
-- Preserve evidence provenance, point-in-time semantics, observable execution and model/provider flexibility.
-- Keep all trading/execution operations outside this repository.
+## Install (Windows PowerShell)
 
-## Quick start
+Commands assume Python 3.11+ and Git:
 
-```bash
+~~~powershell
+git clone git@github-rndm123:0rndm123/fa.git
+cd fa
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev]"
-fa-agent plan --symbol NVDA --asset-class equity
-fa-agent run --symbol NVDA --asset-class equity
-pytest
-```
+python -m pytest -q
+~~~
 
-`plan` selects specialists; `run` exercises the LangGraph workflow but clearly reports each specialist as `not_implemented`.
+If the SSH alias github-rndm123 is not configured, use HTTPS:
+
+~~~powershell
+git clone https://github.com/0rndm123/fa.git
+~~~
+
+## Test NOW, without any API keys
+
+~~~powershell
+fa-agent plan --symbol AAPL --asset-class equity
+fa-agent demo --output reports/demo.json
+~~~
+
+**DEMO is synthetic**. It intentionally invents figures and news for testing and labels all synthetic records. Never interpret this fixture as real research.
+
+## Real SEC financial analysis
+
+Create an identifying SEC user agent with a real contact email; see SEC fair access conditions.
+
+~~~powershell
+$env:SEC_USER_AGENT = "FA_Agent Nelson Contact real.email@domain.com"
+fa-agent run --symbol AAPL --asset-class equity --include-agent fundamental --include-agent filings --output reports/aapl.json
+~~~
+
+Replace the placeholder with your real email. This is a local environment variable and is not sent to GitHub.
+
+To discover current news headlines (this alone needs no SEC configuration):
+
+~~~powershell
+fa-agent run --symbol NVDA --asset-class equity --include-agent news
+~~~
+
+To perform price-based analysis, prepare a CSV with header date,close and daily observations in ISO yyyy-mm-dd order (unsorted dates accepted; duplicate dates rejected). Example:
+
+~~~csv
+date,close
+2026-10-20,100.0
+2026-10-21,101.5
+~~~
+
+~~~powershell
+fa-agent run --symbol AAPL --asset-class equity --include-agent technical --prices C:\path\prices.csv
+~~~
+
+To add optional AI-based *commentary* to a live report:
+
+~~~powershell
+python -m pip install -e ".[ai]"
+$env:OPENAI_API_KEY = "your-key-kept-local"
+fa-agent run --symbol AAPL --asset-class equity --include-agent fundamental --llm --output reports/aapl_ai.json
+~~~
+
+Never commit credentials, private financial data, or reports with proprietary content. This GitHub repo is PUBLIC. Model API usage may incur costs.
 
 ## Architecture
 
-`Request -> Resolve/Plan -> parallel specialists -> Validation/Challenge -> Synthesis -> ResearchReport`
+Request → Plan → Parallel Specialists → Validate → Risk Review → Synthesize → JSON Report.
 
-See [architecture](docs/architecture.md), [specialists](docs/agent_catalog.md), [contracts](docs/contracts.md) and [roadmap](docs/roadmap.md).
+The orchestrator and sources are separate. Services can be injected for testing and future read-only integrations. See docs/architecture.md, docs/agent_catalog.md and docs/roadmap.md.
 
-## Important security note
+## Current limitations
 
-This repository is **public**. Do not commit credentials, financial account data, private strategies, customer information or proprietary SysTrd implementation. Use environment variables and local configuration excluded from Git.
+1. SEC coverage is for US equities. Financial metrics may be incomplete and should be checked against audited disclosures.
+2. News RSS is a metadata discovery feed, not primary-source article validation or a historical archive.
+3. No autonomous investment conclusion, independent bear-case agent, sector research or valuation model yet.
+4. No automatic market-price provider or SysTrd integration yet.
+5. If external research fails, the run reports errors/partial coverage instead of silently inventing findings.
+6. Historical SEC facts filter records on filing date, but present-day ticker mappings are not a complete historically valid security-master.
 
-## Design principles
-
-1. Research (read-only) is separate from decision support and possible future trade execution.
-2. LLMs may request capabilities; they must not execute arbitrary SQL, Python or trading actions.
-3. Financial calculations are deterministic, testable tools, not LLM arithmetic.
-4. Every material claim needs a source and a valid temporal reference.
-5. Missing data and unimplemented capabilities must be reported explicitly, never fabricated.
+**No order execution or access to trading accounts.**
