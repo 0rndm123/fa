@@ -4,6 +4,7 @@ from .models import AssetClass, ResearchRequest
 
 SPECIALISTS: dict[str, str] = {
     "filings": "Corporate filings and disclosures",
+    "financial_data": "Financial data retrieval and historical observations",
     "fundamental": "Financial statements, profitability and cash flow",
     "valuation": "Valuation models and sensitivity",
     "industry": "Industry and competitors",
@@ -17,7 +18,7 @@ SPECIALISTS: dict[str, str] = {
     "risk": "Review and challenge",
 }
 _DEFAULT = {
-    AssetClass.EQUITY: ("filings", "fundamental", "news", "technical", "risk"),
+    AssetClass.EQUITY: ("financial_data", "fundamental", "filings", "news", "technical", "risk"),
     AssetClass.ETF: ("etf", "news", "technical", "risk"),
     AssetClass.CRYPTO: ("crypto_onchain", "news", "technical", "risk"),
     AssetClass.COMMODITY: ("macro", "news", "technical", "risk"),

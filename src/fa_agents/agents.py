@@ -175,6 +175,9 @@ def technical(request: ResearchRequest, svc: Services) -> AgentResult:
         metrics["last_return_pct"] = round((values[-1] / values[-2] - 1) * 100, 4)
     return AgentResult(
         agent_id="technical", status="partial",
+        observations=[FinancialObservation(metric="close", period_end=day, value=price,
+                                           unit="unspecified", source_id="local-prices")
+                      for day, price in series[-250:]],
         summary="Deterministic daily price analysis from a supplied CSV.",
         claims=claims, metrics=metrics,
         evidence=[evidence("local-prices", "Local CSV - unverified", "https://example.com/local-file",

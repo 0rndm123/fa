@@ -5,7 +5,7 @@ from fa_agents.models import ResearchRequest
 
 def test_default_routes():
     assert choose_agents(ResearchRequest(symbol="nvda", asset_class="equity")) == [
-        "filings", "fundamental", "news", "technical", "risk"
+        "financial_data", "fundamental", "filings", "news", "technical", "risk"
     ]
     assert "fundamental" not in choose_agents(ResearchRequest(symbol="BTC", asset_class="crypto"))
 
@@ -18,4 +18,4 @@ def test_routing_filters():
     with pytest.raises(ValueError, match="Unknown agent"):
         choose_agents(ResearchRequest(symbol="A", asset_class="equity",
                                      include_agents=["nonexistent"]))
-    assert len(SPECIALISTS) == 12
+    assert len(SPECIALISTS) == 13

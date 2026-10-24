@@ -100,3 +100,22 @@ The orchestrator and sources are separate. Services can be injected for testing 
 6. Historical SEC facts filter records on filing date, but present-day ticker mappings are not a complete historically valid security-master.
 
 **No order execution or access to trading accounts.**
+
+
+## Local research workbench (v0.3)
+
+From the existing clone (e.g. C:\Users\nmota\fa):
+
+~~~powershell
+git pull origin main
+python -m pip install -e ".[dev,web,ai]"
+.\START_FA.bat
+~~~
+
+Open http://127.0.0.1:8300 . The UI has a resizable/minimizable/maximizable chat and a separate, tabbed research results workspace. Available tabs adapt to each report: Overview, Financials with history charts and tables, Technical, Sources, Specialists and JSON.
+
+The new **Financial Data** specialist pulls up to six years per available annual XBRL metric from SEC, as original dated observations; the Fundamental specialist performs deterministic calculations separately.
+
+The UI is **local only**, not a production service. Use synthetic DEMO without keys; switch to Live with a real equity ticker for SEC data when SEC_USER_AGENT is set. OPENAI_API_KEY_Demo is recognized for the optional AI commentary. Chat follow-ups provide bounded recent history to the LLM, but live research is re-run for each message; it is not yet a fully autonomous conversational research planner.
+
+Price analysis requires uploading a CSV with date and close columns. The CSV remains temporarily on the local server. Reports are downloadable via Export JSON. See docs/interface.md.

@@ -51,18 +51,27 @@ AgentStatus = Literal["completed", "partial", "no_data", "not_implemented", "fai
 ReportStatus = Literal["completed", "partial", "not_ready", "failed"]
 
 
+class FinancialObservation(BaseModel):
+    metric: str
+    period_end: str
+    value: float
+    unit: str = "USD"
+    source_id: str
+
+
 class AgentResult(BaseModel):
     agent_id: str
     status: AgentStatus
     summary: str = ""
     claims: list[str] = Field(default_factory=list)
     metrics: dict[str, float | str | None] = Field(default_factory=dict)
+    observations: list[FinancialObservation] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
 
 
 class ResearchReport(BaseModel):
-    schema_version: str = "0.2"
+    schema_version: str = "0.3"
     request: ResearchRequest
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: ReportStatus

@@ -121,8 +121,8 @@ class NewsRSS:
         return out
 
 
-def annual(facts: dict, tags: tuple[str, ...], as_of: datetime | None) -> list[dict]:
-    """Return at most two fiscal-year facts, never mixing quarters with annual periods."""
+def annual(facts: dict, tags: tuple[str, ...], as_of: datetime | None, limit: int = 2) -> list[dict]:
+    """Filed fiscal-year facts, latest revisions known by as_of. Limit defaults to two."""
     cutoff = cutoff_at(as_of).date().isoformat()
     gaap = facts.get("facts", {}).get("us-gaap", {})
     for tag in tags:
@@ -143,7 +143,7 @@ def annual(facts: dict, tags: tuple[str, ...], as_of: datetime | None) -> list[d
             if end not in rows or filed > rows[end]["filed"]:
                 rows[end] = {"value": val, "end": end, "filed": filed, "tag": tag}
         if rows:
-            return sorted(rows.values(), key=lambda x: x["end"], reverse=True)[:2]
+            return sorted(rows.values(), key=lambda x: x["end"], reverse=True)[:limit]
     return []
 
 

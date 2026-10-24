@@ -13,7 +13,8 @@ def resolve_api_key() -> str:
     return key
 
 
-def explain(report: ResearchReport, model: str | None = None) -> str:
+def explain(report: ResearchReport, model: str | None = None,
+            history: list[dict[str, str]] | None = None) -> str:
     if report.data_mode == "demo":
         raise ValueError("LLM commentary is disabled for synthetic demo data.")
     api_key = resolve_api_key()
@@ -24,6 +25,7 @@ def explain(report: ResearchReport, model: str | None = None) -> str:
         raise RuntimeError('Install optional AI packages: pip install -e ".[ai]"') from exc
     limited = {
         "question": report.request.question,
+        "recent_conversation": history[-8:] if history else [],
         "symbol": report.request.symbol,
         "statuses": {r.agent_id: r.status for r in report.results},
         "records": [{

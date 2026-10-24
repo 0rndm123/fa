@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>FA Agent | Research Workbench</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">FA</div><div><strong>FA Agent</strong><small>Financial Research Workbench</small></div></div>
+    <div class="top-controls"><span class="pill live-pill">LOCAL WORKSPACE</span><span id="connectionStatus" class="muted small">Loading capabilities…</span></div>
+  </header>
+  <section class="workspace" id="workspace">
+    <aside id="chatPane" class="chat-pane" aria-label="Research conversation">
+      <div class="chat-inner">
+        <div class="chat-head">
+          <div><h2>Research chat</h2><span class="subtle">Ask, investigate, follow up</span></div>
+          <div class="head-buttons">
+            <button class="icon-btn" id="chatMinimize" type="button" title="Minimize chat" aria-label="Minimize chat">◀</button>
+            <button class="icon-btn" id="chatMaximize" type="button" title="Maximize chat" aria-label="Maximize chat">⛶</button>
+          </div>
+        </div>
+        <div class="asset-controls">
+          <div class="two"><label>Symbol<input id="symbol" spellcheck="false" placeholder="NVDA" value="DEMO" maxlength="40"></label>
+            <label>Asset class<select id="assetClass"><option value="equity">Equity</option><option value="etf">ETF</option><option value="crypto">Crypto</option><option value="commodity">Commodity</option><option value="fx">FX</option><option value="index">Index</option><option value="other">Other</option></select></label></div>
+          <div class="two"><label>Research mode<select id="mode"><option value="demo">Demo · synthetic</option><option value="live">Live · sources</option></select></label>
+            <label>Horizon<select id="horizon"><option value="short">Short term</option><option value="medium" selected>Medium term</option><option value="long">Long term</option></select></label></div>
+          <div class="options">
+            <label class="checkline"><input type="checkbox" id="useLLM"><span>AI commentary</span></label>
+            <button id="agentToggle" type="button" class="small-button">Agents <span id="agentCount">Auto</span> ▾</button>
+          </div>
+          <div class="agent-panel hidden" id="agentPanel"><div class="agent-tools"><button type="button" id="allAgents">All</button><button type="button" id="defaultAgents">Auto</button><button type="button" id="clearAgents">None</button></div><div id="agentChoices" class="agent-list"></div></div>
+          <div class="uploadrow"><label class="upload-button">+ Price CSV <input id="priceUpload" type="file" accept=".csv,text/csv" hidden></label><span id="uploadLabel" class="subtle ellipsis">Optional for technical analysis</span></div>
+        </div>
+        <div class="messages" id="messages" aria-live="polite">
+          <div class="message assistant"><span class="message-role">FA Agent</span><p>Choose an asset and ask a question. Results will appear in the analysis workspace. Demo uses explicitly synthetic data.</p></div>
+        </div>
+        <form id="chatForm" class="composer">
+          <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>
+          <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div>
+          <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
+        </form>
+      </div>
+      <button id="chatExpandRail" type="button" class="expand-rail" title="Restore research chat" aria-label="Restore research chat">☰<span>CHAT</span></button>
+    </aside>
+    <div class="resize-handle" id="resizeHandle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize chat and results"></div>
+    <main id="resultsPane" class="results-pane">
+      <div class="results-head">
+        <div><div class="eyebrow">RESEARCH OUTPUT</div><h1 id="resultTitle">Analysis workspace</h1><p class="subtle" id="resultSubtitle">Run an analysis to view tables, charts, sources and specialist outputs.</p></div>
+        <div class="result-actions"><span id="reportBadge" class="status-pill">READY</span><button id="downloadReport" type="button" class="outline" disabled>Export JSON ↓</button></div>
+      </div>
+      <div id="warning" class="alert hidden" role="status"></div>
+      <div id="busy" class="busy hidden"><div class="spinner"></div><div><strong>Running research</strong><span class="subtle">Collecting source records and combining agent results. External providers may take time.</span></div></div>
+      <div id="emptyState" class="empty-state"><div class="empty-icon">▤</div><h2>Research results will appear here</h2><p>Financial time series, charts, agent findings, source references and structured outputs can be explored independently of the chat.</p><div class="empty-hints"><span>Financial metrics</span><span>Charts</span><span>Specialists</span><span>Evidence</span></div></div>
+      <div id="reportArea" class="hidden">
+        <nav id="tabs" class="tabs" role="tablist" aria-label="Analysis sections"></nav>
+        <div id="tabContent" class="tab-content" role="tabpanel"></div>
+      </div>
+    </main>
+  </section>
+</div>
+</body>
+</html>

@@ -17,6 +17,9 @@ def test_end_to_end_demo_has_real_calculations():
     result = {x["agent_id"]: x for x in report["results"]}
     assert report["data_mode"] == "demo"
     assert report["status"] == "partial"
+    assert result["financial_data"]["status"] == "completed"
+    assert len(result["financial_data"]["observations"]) == 8
+    assert all(item["source_id"] for item in result["financial_data"]["observations"])
     assert result["fundamental"]["status"] == "completed"
     assert result["fundamental"]["metrics"]["annual_revenue_growth_pct"] == 15.0
     assert result["fundamental"]["metrics"]["fcf_proxy_usd"] == 120000.0
@@ -24,6 +27,7 @@ def test_end_to_end_demo_has_real_calculations():
     assert result["news"]["status"] == "partial"
     assert result["technical"]["status"] == "no_data"
     assert result["risk"]["status"] == "partial"
+    assert len(report["results"]) == 6
     assert all(x["is_synthetic"] for x in result["fundamental"]["evidence"])
     assert any("SYNTHETIC" in x for x in report["warnings"])
 
