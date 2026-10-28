@@ -23,6 +23,7 @@ from .llm import explain
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
+from .voice import MAX_AUDIO_BYTES, VoiceTranscriptionError, transcribe_audio, transcription_configured
 
 WEB_DIR = Path(__file__).parent / "web"
 app = FastAPI(title="FA Agent Research Workbench", version="0.6.0",
@@ -106,6 +107,7 @@ def capabilities():
             {"id":"binance","status":"available_official"},
             {"id":"tradingview","status":"adapter_configured" if os.getenv("FA_TRADINGVIEW_QUOTE_ADAPTER_URL") else "adapter_not_configured"},
         ],
+        "voice_transcription_configured": transcription_configured(),
         "mode": "local_only",
     }
 
@@ -131,6 +133,26 @@ async def upload_prices(file: UploadFile = File(...)):
     _uploaded_prices[identifier] = path
     return {"upload_id": identifier, "observations": len(observations),
             "first_date": observations[0][0], "last_date": observations[-1][0]}
+
+
+@app.post("/api/transcribe-audio")
+async def transcribe_voice(file: UploadFile = File(...)):
+    """Explicit audio upload -> transcription; never automatically execute research."""
+    try:
+        audio = await file.read(MAX_AUDIO_BYTES + 1)
+    finally:
+        await file.close()
+    if not audio:
+        raise HTTPException(status_code=400, detail="Empty voice recording.")
+    if len(audio) > MAX_AUDIO_BYTES:
+        raise HTTPException(status_code=413, detail="Voice recording exceeds 10 MB.")
+    try:
+        transcript = transcribe_audio(audio, file.content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except VoiceTranscriptionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"text": transcript, "requires_review": True}
 
 
 @app.post("/api/analyze")
