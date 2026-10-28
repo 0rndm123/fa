@@ -21,6 +21,7 @@ from .agents import Services
 from .catalog import SPECIALISTS, choose_agents, select_for_question
 from .graph import build_graph
 from .llm import explain
+from .model_settings import load_settings, save_settings, metadata
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
@@ -117,8 +118,51 @@ def capabilities():
         ],
         "voice_transcription_configured": transcription_configured(),
         "voice_replies_configured": transcription_configured(),
+        "voice": {"available": transcription_configured(), "mode": "turn_based"},
+        "model_settings": {"available": True},
         "mode": "local_only",
     }
+
+
+@app.get("/api/model-settings")
+def get_model_settings():
+    try:
+        return {"settings": load_settings(), "catalog": metadata()}
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.put("/api/model-settings")
+async def put_model_settings(request: Request):
+    raw = await request.body()
+    if len(raw) > 32_000:
+        raise HTTPException(status_code=413, detail="Model settings payload too large.")
+    try:
+        import json
+        settings = save_settings(json.loads(raw))
+    except (ValueError, OSError, UnicodeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"settings": settings, "catalog": metadata()}
+
+
+@app.post("/api/voice/transcribe")
+async def voice_transcribe_compatible(request: Request):
+    """Streamed raw-audio endpoint for optional turn-based voice conversations."""
+    mime = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    data = bytearray()
+    async for chunk in request.stream():
+        data.extend(chunk)
+        if len(data) > MAX_AUDIO_BYTES:
+            raise HTTPException(status_code=413, detail="Audio exceeds 10 MB.")
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty recording.")
+    try:
+        text = await run_in_threadpool(transcribe_audio, bytes(data), mime)
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except VoiceTranscriptionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"text": text, "requires_review": True}
 
 
 @app.post("/api/upload-prices")
@@ -218,7 +262,25 @@ def analyze(payload: AnalyzeInput):
         if payload.llm:
             # Context is untrusted text and only assists follow-up interpretation.
             context = [item.model_dump() for item in payload.history[-8:]]
-            report.llm_commentary = explain(report, payload.model, history=context)
+            config = load_settings()
+            report.llm_commentary = explain(report, payload.model or config["synthesis"], history=context)
+            from .llm import explain_specialist
+            count = 0
+            for specialist in report.results:
+                if (specialist.agent_id not in config["agent_ai_enabled"]
+                        or specialist.status not in {"completed", "partial"}):
+                    continue
+                if count >= 4:
+                    report.warnings.append("Per-agent AI commentary limited to four specialists.")
+                    break
+                model = config["agent_models"].get(specialist.agent_id, config["synthesis"])
+                try:
+                    specialist.ai_commentary = explain_specialist(
+                        specialist, report.request.question, model)
+                    specialist.ai_model = model
+                except Exception:
+                    report.warnings.append(f"{specialist.agent_id} AI commentary unavailable.")
+                count += 1
         from .cot import cot_answer
         cot_record = next((x for x in report.results if x.agent_id == "cot"),None)
         from .crypto_derivatives import crypto_answer
