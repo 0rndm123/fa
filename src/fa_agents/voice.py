@@ -88,13 +88,16 @@ def synthesize_speech(text: str) -> bytes:
         from .model_settings import load_settings
         settings = load_settings()
         voice = (os.getenv("FA_VOICE_NAME") or settings["voice"]).strip().lower()
+        from .model_settings import VOICES
+        if voice not in VOICES:
+            raise ValueError("FA_VOICE_NAME must be a supported speech voice.")
         options = {"model": settings["speech"], "voice": voice,
                    "input": text, "response_format": "mp3"}
         if settings["speech"] == "gpt-4o-mini-tts":
             options["instructions"] = (
-                "Speak in European Portuguese when the provided text is Portuguese. "
-                "Use a measured, professional tone. Pronounce numbers and asset tickers clearly. "
-                "Do not add or change any words."
+                "Speak in European Portuguese when the text is Portuguese, and British English "
+                "when it is English. Use a measured, professional tone; pronounce numbers "
+                "and asset tickers clearly. Do not add or change any words."
             )
         response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
             **options
