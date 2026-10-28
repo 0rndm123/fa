@@ -37,7 +37,7 @@ As configurações são guardadas em `~/.fa_agent/model_settings.json` (ou `FA_M
 - `GET /api/model-settings` devolve escolhas e catálogo.
 - `PUT /api/model-settings` guarda as escolhas com validação.
 - `POST /api/voice/transcribe` recebe áudio limitado a 10 MB e devolve texto.
-- `POST /api/voice/speak` devolve uma resposta MP3 a partir de texto limitado a 2200 caracteres.
+- `POST /api/speak-reply` devolve uma resposta MP3 a partir de texto limitado a 2200 caracteres.
 - A API conserva a restrição existente a `localhost`.
 
 ```powershell
