@@ -22,3 +22,11 @@
 .cot-controls select{flex:1;min-width:240px;max-width:780px;background:#101824;border:1px solid #354b60;border-radius:8px;color:#e9eff6;padding:9px 12px}
 .cot-controls .primary{white-space:nowrap}
 .cot-plot{width:100%;min-height:210px}
+
+/* Explicit voice conversation controls. These never activate the mic automatically at page load. */
+.voice-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 0 1px}
+.voice-button{background:#213a54;border:1px solid #4778a2;border-radius:8px;color:#e9eff6;padding:7px 11px;font-size:12px;font-weight:600}
+.voice-button:hover{border-color:#84bafa}
+.voice-stop{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:7px 10px;font-size:12px}
+.voice-autoline{color:var(--muted);font-size:11px;cursor:pointer}
+#voiceStatus{display:block;line-height:1.4;min-height:17px}
