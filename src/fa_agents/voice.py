@@ -109,6 +109,10 @@ def synthesize_speech(text: str) -> bytes:
         return audio
     except VoiceTranscriptionError:
         raise
+    except ValueError as exc:
+        if str(exc).startswith("FA_VOICE_NAME"):
+            raise
+        raise VoiceTranscriptionError("Invalid model configuration or speech provider request.") from exc
     except Exception as exc:
         # API exceptions can contain sensitive request details.
         raise VoiceTranscriptionError("Spoken reply provider unavailable. Try again.") from exc
