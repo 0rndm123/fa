@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from starlette.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -20,6 +21,7 @@ from .agents import Services
 from .catalog import SPECIALISTS, choose_agents, select_for_question
 from .graph import build_graph
 from .llm import explain
+from .voice import CONTENT_TYPES, MAX_AUDIO_BYTES, VoiceError, transcribe_audio, synthesize_speech
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
@@ -48,6 +50,10 @@ async def local_only(request: Request, call_next):
             if parsed.scheme not in {"http", "https"} or parsed.hostname != host or parsed.port != request.url.port:
                 return JSONResponse(status_code=403, content={"detail": "Origin not allowed."})
     return await call_next(request)
+
+
+class VoiceSpeakInput(BaseModel):
+    text: str = Field(min_length=1, max_length=2200)
 
 
 class HistoryItem(BaseModel):
@@ -106,8 +112,37 @@ def capabilities():
             {"id":"binance","status":"available_official"},
             {"id":"tradingview","status":"adapter_configured" if os.getenv("FA_TRADINGVIEW_QUOTE_ADAPTER_URL") else "adapter_not_configured"},
         ],
+        "voice": {"available": has_llm, "mode": "turn_based", "audio_sent_to": "OpenAI API"},
         "mode": "local_only",
     }
+
+
+@app.post("/api/voice/transcribe")
+async def voice_transcribe(request: Request):
+    mime = request.headers.get("content-type", "").split(";", 1)[0].lower().strip()
+    if mime not in CONTENT_TYPES:
+        raise HTTPException(415, "Unsupported audio format.")
+    audio = bytearray()
+    async for chunk in request.stream():
+        audio.extend(chunk)
+        if len(audio) > MAX_AUDIO_BYTES:
+            raise HTTPException(413, "Audio exceeds 10 MB limit.")
+    if not audio:
+        raise HTTPException(400, "Empty recording.")
+    try:
+        transcript = await run_in_threadpool(transcribe_audio, bytes(audio), mime)
+    except VoiceError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return {"text": transcript}
+
+
+@app.post("/api/voice/speak")
+async def voice_speak(payload: VoiceSpeakInput):
+    try:
+        audio = await run_in_threadpool(synthesize_speech, payload.text)
+    except VoiceError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/upload-prices")
