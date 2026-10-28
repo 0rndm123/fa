@@ -31,3 +31,9 @@
 @keyframes voice-pulse{50%{box-shadow:0 0 0 3px rgba(255,133,151,.19)}}
 #voiceStatus{line-height:1.4;min-height:14px}
 @media(max-width:380px){.composer-actions{gap:8px}.composer-send{gap:5px}.voice-button{padding:8px}.primary{padding:8px}}
+
+/* Spoken replies use the existing composer; no changes to chart layout. */
+.voice-reply-optin{font-size:11px;color:var(--muted);gap:7px}
+.voice-reply-optin input{accent-color:var(--accent)}
+.composer-send{flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:480px){.composer-actions{align-items:flex-start;gap:9px;flex-wrap:wrap}.composer-send{width:100%}.voice-button{flex:1}}
