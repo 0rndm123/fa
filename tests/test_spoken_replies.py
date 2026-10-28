@@ -32,10 +32,13 @@ def test_tts_calls_explicit_provider_and_does_not_save_audio(monkeypatch):
     kwargs = openai.audio.speech.create.call_args.kwargs
     assert kwargs == {
         "model": "gpt-4o-mini-tts",
-        "voice": "alloy",
+        "voice": "cedar",
         "input": "Analise a NVIDIA.",
         "response_format": "mp3",
+        "instructions": kwargs["instructions"],
     }
+    assert "European Portuguese" in kwargs["instructions"]
+    assert "British English" in kwargs["instructions"]
 
 
 def test_unsupported_voice_does_not_call_provider(monkeypatch):
