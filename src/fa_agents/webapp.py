@@ -23,6 +23,7 @@ from .llm import explain
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
+from .systrd_backtests import is_backtest_question, backtest_answer
 
 WEB_DIR = Path(__file__).parent / "web"
 app = FastAPI(title="FA Agent Research Workbench", version="0.6.0",
@@ -93,7 +94,7 @@ def capabilities():
     return {
         "agents": [{"id": key, "description": value,
                     "implementation": ("working" if key in {"financial_data", "fundamental", "financial_performance"} else
-                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition", "cot", "crypto_derivatives"} else "planned")}
+                        "partial" if key in {"filings", "news", "technical", "risk", "debt_liquidity", "governance", "industry_context", "competition", "cot", "crypto_derivatives", "backtest"} else "planned")}
                    for key, value in SPECIALISTS.items()],
         "classes": [cls.value for cls in AssetClass],
         "cot_reports": ["tff","disaggregated","legacy"],
@@ -106,6 +107,7 @@ def capabilities():
             {"id":"binance","status":"available_official"},
             {"id":"tradingview","status":"adapter_configured" if os.getenv("FA_TRADINGVIEW_QUOTE_ADAPTER_URL") else "adapter_not_configured"},
         ],
+        "systrd_backtests_configured": bool(os.getenv("FA_SYSTRD_API_URL")),
         "mode": "local_only",
     }
 
@@ -135,7 +137,7 @@ async def upload_prices(file: UploadFile = File(...)):
 
 @app.post("/api/analyze")
 def analyze(payload: AnalyzeInput):
-    if is_price_question(payload.question):
+    if is_price_question(payload.question) and not is_backtest_question(payload.question):
         return _answer_market_quote(payload)
     if payload.mode == "demo" and payload.symbol != "DEMO":
         raise HTTPException(400, "Demo mode accepts only the synthetic DEMO asset.")
@@ -180,7 +182,9 @@ def analyze(payload: AnalyzeInput):
         cot_record = next((x for x in report.results if x.agent_id == "cot"),None)
         from .crypto_derivatives import crypto_answer
         crypto_record = next((x for x in report.results if x.agent_id == "crypto_derivatives"),None)
+        backtest_record = next((x for x in report.results if x.agent_id == "backtest"), None)
         answer = report.llm_commentary or (
+            backtest_answer(backtest_record) if backtest_record else
             cot_answer(cot_record) if cot_record else
             crypto_answer(crypto_record) if crypto_record else _coverage_answer(report))
         return {"report": report.model_dump(mode="json"), "answer": answer,
