@@ -59,7 +59,7 @@ def test_put_and_get_settings(isolated):
 
 def test_oversized_settings_rejected(isolated):
     response = TestClient(app).put("/api/model-settings",
-        data=b"x"*33000, headers={"Content-Type": "application/json"})
+        content=b"x"*33000, headers={"Content-Type": "application/json"})
     assert response.status_code == 413
 
 
@@ -99,7 +99,7 @@ def test_voice_tts_uses_configured_model_and_voice(isolated, monkeypatch):
 def test_speak_endpoint_returns_audio_without_persisting_it(isolated):
     client = TestClient(app)
     with patch("fa_agents.webapp.synthesize_speech", return_value=b"mp3-data") as model:
-        response = client.post("/api/voice/speak", json={"text":"O BTC recuperou."})
+        response = client.post("/api/speak-reply", json={"text":"O BTC recuperou."})
     assert response.status_code == 200
     assert response.content == b"mp3-data"
     assert response.headers["content-type"] == "audio/mpeg"
@@ -109,7 +109,7 @@ def test_speak_endpoint_returns_audio_without_persisting_it(isolated):
 def test_audio_transcribe_api_compatibility(isolated):
     client = TestClient(app)
     with patch("fa_agents.webapp.transcribe_audio", return_value="Qual o preço do BTC?") as provider:
-        response = client.post("/api/voice/transcribe", data=b"audio",
+        response = client.post("/api/voice/transcribe", content=b"audio",
             headers={"Content-Type":"audio/webm"})
     assert response.status_code == 200
     assert response.json()["requires_review"] is True
