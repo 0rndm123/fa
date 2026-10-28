@@ -22,3 +22,12 @@
 .cot-controls select{flex:1;min-width:240px;max-width:780px;background:#101824;border:1px solid #354b60;border-radius:8px;color:#e9eff6;padding:9px 12px}
 .cot-controls .primary{white-space:nowrap}
 .cot-plot{width:100%;min-height:210px}
+
+/* Optional audio-to-text input; recording state is intentionally visible. */
+.composer-send{display:flex;align-items:center;gap:8px}
+.voice-button{background:#203347;border:1px solid #48627e;border-radius:8px;color:#d9e8f7;padding:9px 11px;font-size:12px;min-height:36px}
+.voice-button:hover{border-color:#8bc2ff}
+.voice-button.recording{background:#612a39;border-color:#ff8597;color:#ffe5ea;animation:voice-pulse 1.7s ease-in-out infinite}
+@keyframes voice-pulse{50%{box-shadow:0 0 0 3px rgba(255,133,151,.19)}}
+#voiceStatus{line-height:1.4;min-height:14px}
+@media(max-width:380px){.composer-actions{gap:8px}.composer-send{gap:5px}.voice-button{padding:8px}.primary{padding:8px}}
