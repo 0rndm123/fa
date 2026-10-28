@@ -90,7 +90,7 @@ def test_ui_speech_controls_are_opt_in():
     js = (web / "app.js").read_text(encoding="utf-8")
     assert 'id="autoSpeak" disabled' in html
     assert 'id="speakReply"' in html
-    assert 'if($("autoSpeak").checked)void speakLatestAnswer()' in js
+    assert 'if($("autoSpeak").checked&&!window.FAVoiceDialogue?.active())void speakLatestAnswer()' in js
     assert 'scope:conversationScope()' in js
     assert 'filter(x=>x.scope===conversationScope())' in js
     assert '"/api/speak-reply"' in js
