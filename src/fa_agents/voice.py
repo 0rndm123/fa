@@ -52,9 +52,11 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Voice transcription requires the OpenAI API key and the [ai] extra.") from exc
     try:
-        language = (os.getenv("FA_VOICE_LANGUAGE", "") or "").strip().lower()
-        options = {"model": "gpt-4o-mini-transcribe", "file": (entry[0], data, entry[1])}
-        if language:
+        from .model_settings import load_settings
+        settings = load_settings()
+        language = (os.getenv("FA_VOICE_LANGUAGE") or settings["language"]).strip().lower()
+        options = {"model": settings["transcription"], "file": (entry[0], data, entry[1])}
+        if language and language != "auto":
             options["language"] = language
         response = OpenAI(api_key=api_key, timeout=40.0, max_retries=0).audio.transcriptions.create(**options)
         text = str(response.text or "").strip()
@@ -66,3 +68,40 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except Exception as exc:
         # Do not disclose API credentials or provider response details in the browser.
         raise VoiceTranscriptionError("Voice transcription provider unavailable. Try again.") from exc
+
+
+MAX_SPEECH_CHARS = 2200
+
+
+def synthesize_speech(text: str) -> bytes:
+    """Synthesize a bounded spoken research answer using the configured voice."""
+    if not isinstance(text, str) or not text.strip() or len(text) > MAX_SPEECH_CHARS:
+        raise ValueError("Speech text must contain 1 to 2200 characters.")
+    from .model_settings import load_settings
+    try:
+        from .llm import resolve_api_key
+        from openai import OpenAI
+        settings = load_settings()
+        options = {
+            "model": settings["speech"],
+            "voice": settings["voice"],
+            "input": text,
+            "response_format": "mp3",
+        }
+        if settings["speech"] == "gpt-4o-mini-tts":
+            options["instructions"] = ("Speak naturally in European Portuguese when the text "
+                "is in Portuguese, maintaining a professional tone. Articulate market data, "
+                "dates and numbers clearly. Do not add words not in the input.")
+        response = OpenAI(api_key=resolve_api_key(), timeout=40.0, max_retries=0).audio.speech.create(
+            **options
+        )
+        audio = response.read()
+        if not audio or len(audio) > 6_000_000:
+            raise VoiceTranscriptionError("Invalid generated speech response.")
+        return audio
+    except (ValueError, ImportError) as exc:
+        raise VoiceTranscriptionError("Voice synthesis needs a valid API key and the [ai] extra.") from exc
+    except VoiceTranscriptionError:
+        raise
+    except Exception as exc:
+        raise VoiceTranscriptionError("Speech provider unavailable. Try again.") from exc
