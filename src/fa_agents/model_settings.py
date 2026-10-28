@@ -22,12 +22,12 @@ TEXT_MODELS = (
 TRANSCRIPTION_MODELS = ("gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1")
 SPEECH_MODELS = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
 VOICES = ("alloy", "ash", "ballad", "coral", "echo", "fable",
-          "nova", "onyx", "sage", "shimmer", "verse")
+          "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar")
 DEFAULTS = {
     "synthesis": os.getenv("FA_LLM_MODEL", "gpt-4.1-mini"),
     "transcription": "gpt-4o-mini-transcribe",
     "speech": "gpt-4o-mini-tts",
-    "voice": "alloy",
+    "voice": "cedar",
     "language": "auto",
     "agent_models": {},
     "agent_ai_enabled": [],
