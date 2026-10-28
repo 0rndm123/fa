@@ -54,9 +54,11 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Voice transcription requires the OpenAI API key and the [ai] extra.") from exc
     try:
-        language = (os.getenv("FA_VOICE_LANGUAGE", "") or "").strip().lower()
-        options = {"model": "gpt-4o-mini-transcribe", "file": (entry[0], data, entry[1])}
-        if language:
+        from .model_settings import load_settings
+        settings = load_settings()
+        language = (os.getenv("FA_VOICE_LANGUAGE") or settings["language"]).strip().lower()
+        options = {"model": settings["transcription"], "file": (entry[0], data, entry[1])}
+        if language and language != "auto":
             options["language"] = language
         response = OpenAI(api_key=api_key, timeout=40.0, max_retries=0).audio.transcriptions.create(**options)
         text = str(response.text or "").strip()
@@ -82,14 +84,20 @@ def synthesize_speech(text: str) -> bytes:
         api_key = resolve_api_key()
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Spoken replies require the OpenAI API key and [ai] extra.") from exc
-    # Keep a known supported voice by default, with a small allowlist.
-    voice = (os.getenv("FA_VOICE_NAME", "alloy") or "alloy").strip().lower()
-    if voice not in {"alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
-                     "onyx", "sage", "shimmer"}:
-        raise ValueError("FA_VOICE_NAME must be a supported OpenAI speech voice.")
     try:
+        from .model_settings import load_settings
+        settings = load_settings()
+        voice = (os.getenv("FA_VOICE_NAME") or settings["voice"]).strip().lower()
+        options = {"model": settings["speech"], "voice": voice,
+                   "input": text, "response_format": "mp3"}
+        if settings["speech"] == "gpt-4o-mini-tts":
+            options["instructions"] = (
+                "Speak in European Portuguese when the provided text is Portuguese. "
+                "Use a measured, professional tone. Pronounce numbers and asset tickers clearly. "
+                "Do not add or change any words."
+            )
         response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
-            model="gpt-4o-mini-tts", voice=voice, input=text, response_format="mp3",
+            **options
         )
         # Only accept a bounded binary response. The audio never reaches disk.
         audio = response.content
