@@ -15,13 +15,14 @@ function table(head,rows){const w=el("div","table-wrap"),t=el("table"),h=el("the
 function showError(x){$("warning").textContent=x;$("warning").classList.remove("hidden")}
 function hideError(){$("warning").classList.add("hidden");$("warning").textContent=""}
 function saveChat(){try{sessionStorage.setItem("fa-chat-session-v1",JSON.stringify(state.messages.slice(-40)))}catch{}}
-function drawMessage(role,content,save=true){const n=el("div","message "+role);n.appendChild(el("span","message-role",role==="user"?"YOU":"FA AGENT"));n.appendChild(el("p","",content));$("messages").appendChild(n);$("messages").scrollTop=$("messages").scrollHeight;if(save){state.messages.push({role,content});saveChat()}}
+function conversationScope(){return $("assetClass").value+"|"+$("symbol").value.trim().toUpperCase()}
+function drawMessage(role,content,save=true){const n=el("div","message "+role);n.appendChild(el("span","message-role",role==="user"?"YOU":"FA AGENT"));n.appendChild(el("p","",content));$("messages").appendChild(n);$("messages").scrollTop=$("messages").scrollHeight;if(save){state.messages.push({role,content,scope:conversationScope()});saveChat()}}
 function restoreHistory(){try{const x=JSON.parse(sessionStorage.getItem("fa-chat-session-v1")||"[]");if(Array.isArray(x))state.messages=x.slice(-40).filter(v=>v&&["user","assistant"].includes(v.role)&&typeof v.content==="string")}catch{}if(state.messages.length){clear($("messages"));state.messages.forEach(x=>drawMessage(x.role,x.content,false))}}
 function toggleChat(mode){const mini=workspace.classList.contains("chat-minimized"),maxi=workspace.classList.contains("chat-maximized");workspace.classList.remove("chat-minimized","chat-maximized");if(mode==="min"&&!mini)workspace.classList.add("chat-minimized");if(mode==="max"&&!maxi)workspace.classList.add("chat-maximized");$("chatMaximize").textContent=workspace.classList.contains("chat-maximized")?"⇲":"⛶";$("chatMaximize").title=workspace.classList.contains("chat-maximized")?"Restore split view":"Maximize chat"}
 $("chatMinimize").onclick=()=>toggleChat("min");$("chatMaximize").onclick=()=>toggleChat("max");$("chatExpandRail").onclick=()=>toggleChat("min");
 (function(){const handle=$("resizeHandle");handle.addEventListener("pointerdown",event=>{if(window.innerWidth<800||workspace.classList.contains("chat-minimized")||workspace.classList.contains("chat-maximized"))return;event.preventDefault();handle.setPointerCapture(event.pointerId);const move=e=>{const bound=workspace.getBoundingClientRect();workspace.style.setProperty("--chat-size",Math.max(270,Math.min(bound.width*.65,e.clientX-bound.left))+"px")};const stop=()=>{handle.removeEventListener("pointermove",move);handle.removeEventListener("pointerup",stop);handle.removeEventListener("pointercancel",stop)};handle.addEventListener("pointermove",move);handle.addEventListener("pointerup",stop);handle.addEventListener("pointercancel",stop)})})();
 function agentCount(){$("agentCount").textContent=state.selectedAgents===null?"Auto":state.selectedAgents.length+" selected"}
-async function loadCapabilities(){try{const r=await fetch("/api/capabilities",{cache:"no-store"});if(!r.ok)throw Error("Server unavailable");state.capabilities=await r.json();const list=clear($("agentChoices"));state.capabilities.agents.forEach(a=>{const l=el("label"),input=el("input");input.type="checkbox";input.value=a.id;input.onchange=()=>{state.selectedAgents=[...list.querySelectorAll("input:checked")].map(x=>x.value);agentCount()};const text=el("span","",a.id.replaceAll("_"," "));text.title=a.description+" ("+a.implementation+")";if(a.implementation==="planned")text.style.color="#72879c";append(l,input,text);list.appendChild(l)});$("useLLM").disabled=!state.capabilities.llm_configured||$("mode").value==="demo";$("useLLM").title=state.capabilities.llm_configured?"Optional AI commentary":"Set OPENAI_API_KEY_Demo or OPENAI_API_KEY";$("voiceToggle").disabled=!state.capabilities.voice_transcription_configured; if(!state.capabilities.voice_transcription_configured)voiceStatus("Voice transcription unavailable: configure OPENAI_API_KEY_Demo or OPENAI_API_KEY and install [ai].");$("connectionStatus").textContent=(state.capabilities.llm_configured?"AI ready":"AI key unavailable")+" · "+(state.capabilities.sec_configured?"SEC ready":"SEC identity not configured")}catch(err){$("connectionStatus").textContent="Server error";showError(String(err.message))}}
+async function loadCapabilities(){try{const r=await fetch("/api/capabilities",{cache:"no-store"});if(!r.ok)throw Error("Server unavailable");state.capabilities=await r.json();const list=clear($("agentChoices"));state.capabilities.agents.forEach(a=>{const l=el("label"),input=el("input");input.type="checkbox";input.value=a.id;input.onchange=()=>{state.selectedAgents=[...list.querySelectorAll("input:checked")].map(x=>x.value);agentCount()};const text=el("span","",a.id.replaceAll("_"," "));text.title=a.description+" ("+a.implementation+")";if(a.implementation==="planned")text.style.color="#72879c";append(l,input,text);list.appendChild(l)});$("useLLM").disabled=!state.capabilities.llm_configured||$("mode").value==="demo";$("useLLM").title=state.capabilities.llm_configured?"Optional AI commentary":"Set OPENAI_API_KEY_Demo or OPENAI_API_KEY";$("voiceToggle").disabled=!state.capabilities.voice_transcription_configured; if(!state.capabilities.voice_transcription_configured)voiceStatus("Voice transcription unavailable: configure OPENAI_API_KEY_Demo or OPENAI_API_KEY and install [ai].");syncSpeechControls();$("connectionStatus").textContent=(state.capabilities.llm_configured?"AI ready":"AI key unavailable")+" · "+(state.capabilities.sec_configured?"SEC ready":"SEC identity not configured")}catch(err){$("connectionStatus").textContent="Server error";showError(String(err.message))}}
 $("agentToggle").onclick=()=>$("agentPanel").classList.toggle("hidden");
 $("allAgents").onclick=()=>{const nodes=[...$("agentChoices").querySelectorAll("input")];nodes.forEach(x=>x.checked=true);state.selectedAgents=nodes.map(x=>x.value);agentCount()};
 $("clearAgents").onclick=()=>{$("agentChoices").querySelectorAll("input").forEach(x=>x.checked=false);state.selectedAgents=[];agentCount()};
@@ -29,8 +30,8 @@ $("defaultAgents").onclick=()=>{$("agentChoices").querySelectorAll("input").forE
 $("mode").onchange=()=>{const demo=$("mode").value==="demo";$("symbol").disabled=demo;if(demo){$("symbol").value="DEMO";$("useLLM").checked=false}else if($("symbol").value==="DEMO")$("symbol").value="NVDA";$("useLLM").disabled=demo||!(state.capabilities&&state.capabilities.llm_configured);if(demo)showError("DEMO MODE: company figures and news are synthetic.");else hideError()};
 $("mode").dispatchEvent(new Event("change"));
 $("priceUpload").onchange=async event=>{const file=event.target.files[0];if(!file)return;$("uploadLabel").textContent="Uploading "+file.name+"…";try{const form=new FormData();form.append("file",file);const r=await fetch("/api/upload-prices",{method:"POST",body:form});const data=await r.json();if(!r.ok)throw Error(data.detail||"CSV rejected");state.uploadId=data.upload_id;$("uploadLabel").textContent=file.name+" ("+data.observations+" rows)";hideError()}catch(err){state.uploadId=null;$("uploadLabel").textContent="Upload failed";showError(String(err.message))}};
-$("clearChat").onclick=()=>{state.messages=[];saveChat();clear($("messages"));drawMessage("assistant","Conversation cleared. Start a new research question.")};
-async function submitQuery(event){event.preventDefault();if(state.running||voiceBusy||voiceRecorder?.state==="recording")return;const q=$("question").value.trim();if(!q)return;const history=state.messages.slice(-8).map(x=>({role:x.role,content:x.content.slice(0,2000)}));drawMessage("user",q);$("question").value="";$("emptyState").classList.add("hidden");$("busy").classList.remove("hidden");$("submit").disabled=true;state.running=true;hideError();$("reportBadge").textContent="RUNNING";const payload={symbol:$("symbol").value.trim().toUpperCase(),asset_class:$("assetClass").value,mode:$("mode").value,question:q,horizon:$("horizon").value,agents:state.cotForceAgents?["cot"]:state.selectedAgents,llm:$("useLLM").checked,price_upload_id:state.uploadId,history,cot_market_code:state.cotMarketCode,cot_report_type:state.cotReportType};state.cotMarketCode=null;state.cotReportType=null;state.cotForceAgents=false;try{const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));state.report=data.report;drawMessage("assistant",data.answer);renderReport();if(workspace.classList.contains("chat-maximized"))toggleChat("max")}catch(err){const msg="Research failed: "+String(err.message||err);drawMessage("assistant",msg);showError(msg);$("reportBadge").textContent="ERROR"}finally{$("busy").classList.add("hidden");$("submit").disabled=false;state.running=false}}
+$("clearChat").onclick=()=>{stopSpeech();lastSpokenAnswer="";syncSpeechControls();state.messages=[];saveChat();clear($("messages"));drawMessage("assistant","Conversation cleared. Start a new research question.")};
+async function submitQuery(event){event.preventDefault();if(state.running||voiceBusy||voiceRecorder?.state==="recording")return;stopSpeech();const q=$("question").value.trim();if(!q)return;const history=state.messages.filter(x=>x.scope===conversationScope()).slice(-8).map(x=>({role:x.role,content:x.content.slice(0,2000)}));drawMessage("user",q);$("question").value="";$("emptyState").classList.add("hidden");$("busy").classList.remove("hidden");$("submit").disabled=true;state.running=true;hideError();$("reportBadge").textContent="RUNNING";const payload={symbol:$("symbol").value.trim().toUpperCase(),asset_class:$("assetClass").value,mode:$("mode").value,question:q,horizon:$("horizon").value,agents:state.cotForceAgents?["cot"]:state.selectedAgents,llm:$("useLLM").checked,price_upload_id:state.uploadId,history,cot_market_code:state.cotMarketCode,cot_report_type:state.cotReportType};state.cotMarketCode=null;state.cotReportType=null;state.cotForceAgents=false;try{const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));state.report=data.report;drawMessage("assistant",data.answer);lastSpokenAnswer=typeof data.answer==="string"?data.answer:"";syncSpeechControls();renderReport();if($("autoSpeak").checked)void speakLatestAnswer();if(workspace.classList.contains("chat-maximized"))toggleChat("max")}catch(err){const msg="Research failed: "+String(err.message||err);drawMessage("assistant",msg);showError(msg);$("reportBadge").textContent="ERROR"}finally{$("busy").classList.add("hidden");$("submit").disabled=false;state.running=false}}
 $("chatForm").onsubmit=submitQuery;
 $("question").onkeydown=event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();$("chatForm").requestSubmit()}};
 
@@ -74,6 +75,7 @@ async function sendVoiceRecording(parts,mime){
 }
 async function toggleVoice(){
   if(voiceRecorder?.state==="recording"){stopVoiceRecording();return}
+  stopSpeech();
   if(voiceBusy||state.running)return;
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
     voiceStatus("This browser does not support microphone recording. Use keyboard dictation instead.");
@@ -121,6 +123,69 @@ async function toggleVoice(){
   }
 }
 $("voiceToggle").onclick=toggleVoice;
+
+// Spoken answers are opt-in. Keep the microphone off during audio playback.
+// Abort in-flight synthesis on Stop and revoke all temporary audio URLs.
+let lastSpokenAnswer="",speechPlayer=null,speechUrl=null,speechRequest=null,speechGeneration=0;
+function syncSpeechControls(){
+  const available=Boolean(state.capabilities?.voice_replies_configured);
+  $("speakReply").disabled=!available||(!lastSpokenAnswer&&!speechRequest&&!speechPlayer);
+  $("autoSpeak").disabled=!available;
+  if(!available)$("autoSpeak").checked=false;
+}
+function stopSpeech(){
+  speechGeneration++;
+  if(speechRequest){speechRequest.abort();speechRequest=null}
+  if(speechPlayer){speechPlayer.pause();speechPlayer.removeAttribute("src");speechPlayer.load();speechPlayer=null}
+  if(speechUrl){URL.revokeObjectURL(speechUrl);speechUrl=null}
+  $("speakReply").textContent="▶ Listen";
+  $("speakReply").setAttribute("aria-label","Read the last answer aloud");
+  syncSpeechControls();
+}
+async function speakLatestAnswer(){
+  if(speechRequest||speechPlayer){stopSpeech();return}
+  if(!lastSpokenAnswer||!state.capabilities?.voice_replies_configured)return;
+  const answer=lastSpokenAnswer.slice(0,2200);
+  const isTruncated=lastSpokenAnswer.length>2200;
+  speechRequest=new AbortController();
+  const generation=++speechGeneration;
+  $("speakReply").textContent="■ Stop audio";
+  $("speakReply").setAttribute("aria-label","Stop spoken answer");
+  $("speakReply").disabled=false;
+  voiceStatus("Generating spoken answer…"+(isTruncated?" (first 2200 characters)":""));
+  try{
+    const response=await fetch("/api/speak-reply",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({text:answer}),signal:speechRequest.signal
+    });
+    if(!response.ok){
+      const error=await response.json().catch(()=>({}));
+      throw Error(typeof error.detail==="string"?error.detail:"Spoken answer unavailable");
+    }
+    const audio=await response.blob();
+    if(generation!==speechGeneration)return;
+    if(audio.size===0||audio.size>5*1024*1024)throw Error("Invalid spoken audio size");
+    speechRequest=null;
+    speechUrl=URL.createObjectURL(audio);
+    speechPlayer=new Audio(speechUrl);
+    speechPlayer.onended=()=>{if(generation===speechGeneration){stopSpeech();voiceStatus("Spoken answer finished.")}};
+    speechPlayer.onerror=()=>{if(generation===speechGeneration){stopSpeech();voiceStatus("Audio playback failed.")}};
+    await speechPlayer.play();
+    if(generation===speechGeneration)voiceStatus("Playing spoken answer. Click Stop audio to interrupt.");
+  }catch(error){
+    if(generation!==speechGeneration)return;
+    stopSpeech();
+    if(error.name!=="AbortError")voiceStatus("Spoken answer: "+String(error.message||error));
+  }
+}
+$("speakReply").onclick=()=>{void speakLatestAnswer()};
+$("autoSpeak").onchange=()=>{
+  if(!$("autoSpeak").checked&&speechRequest){stopSpeech();voiceStatus("Automatic spoken replies disabled.")}
+};
+["symbol","assetClass"].forEach(id=>$(id).addEventListener("change",()=>{
+  stopSpeech();lastSpokenAnswer="";syncSpeechControls();
+}));
+
 window.addEventListener("pagehide",()=>{
   voiceCancelled=true;
   if(voiceRecorder?.state==="recording")voiceRecorder.stop();
