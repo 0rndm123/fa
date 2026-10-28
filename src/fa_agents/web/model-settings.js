@@ -135,7 +135,7 @@
     if(!catalog)return;
     config={
       synthesis:"gpt-4.1-mini",transcription:"gpt-4o-mini-transcribe",
-      speech:"gpt-4o-mini-tts",voice:"alloy",language:"auto",
+      speech:"gpt-4o-mini-tts",voice:"cedar",language:"auto",
       agent_models:{},agent_ai_enabled:[]
     };
     render();
