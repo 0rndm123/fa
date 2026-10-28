@@ -112,6 +112,8 @@ class AgentResult(BaseModel):
     agent_id: str
     status: AgentStatus
     summary: str = ""
+    ai_commentary: str | None = None
+    ai_model: str | None = None
     claims: list[str] = Field(default_factory=list)
     metrics: dict[str, float | str | None] = Field(default_factory=dict)
     observations: list[FinancialObservation] = Field(default_factory=list)
