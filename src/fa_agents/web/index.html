@@ -42,7 +42,8 @@
         </div>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>
-          <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div>
+          <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><div class="composer-send"><button type="button" id="voiceToggle" class="voice-button" aria-label="Start voice recording" aria-pressed="false" title="Record a question (max 90 seconds)">🎙 Voice</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div></div>
+          <span id="voiceStatus" class="subtle small" role="status" aria-live="polite">Record a question, review the transcription, then send. Audio is sent to OpenAI only for transcription.</span>
           <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
         </form>
       </div>
