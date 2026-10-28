@@ -89,9 +89,14 @@ def synthesize_speech(text: str) -> bytes:
             "response_format": "mp3",
         }
         if settings["speech"] == "gpt-4o-mini-tts":
-            options["instructions"] = ("Speak naturally in European Portuguese when the text "
-                "is in Portuguese, maintaining a professional tone. Articulate market data, "
-                "dates and numbers clearly. Do not add words not in the input.")
+            options["instructions"] = (
+                "Use a natural, composed adult conversational delivery with clear "
+                "articulation, restrained expression, natural intonation and moderately "
+                "paced rhythm. Use European Portuguese for Portuguese text and British "
+                "English for English text. Pronounce financial figures, percentages, "
+                "dates, ticker symbols and company names carefully. Avoid theatrical "
+                "intonation and robotic pacing. Only read the supplied answer."
+            )
         response = OpenAI(api_key=resolve_api_key(), timeout=40.0, max_retries=0).audio.speech.create(
             **options
         )
