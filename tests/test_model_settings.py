@@ -85,7 +85,7 @@ def test_voice_tts_uses_configured_model_and_voice(isolated, monkeypatch):
     config["voice"] = "nova"
     model_settings.save_settings(config)
     client = Mock()
-    client.audio.speech.create.return_value.read.return_value = b"sample.mp3"
+    client.audio.speech.create.return_value.content = b"sample.mp3"
     monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(OpenAI=Mock(return_value=client)))
     with patch("fa_agents.llm.resolve_api_key", return_value="test"):
         audio = voice.synthesize_speech("Boa tarde.")
