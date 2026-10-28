@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from starlette.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,7 +24,10 @@ from .llm import explain
 from .models import AssetClass, ResearchReport, ResearchRequest, AgentResult, Evidence
 from .providers import ProviderError, prices_from_csv, sec_user_agent_config
 from .market_data import MarketDataOrchestrator, is_price_question, extract_symbol, quote_answer
-from .voice import MAX_AUDIO_BYTES, VoiceTranscriptionError, transcribe_audio, transcription_configured
+from .voice import (
+    MAX_AUDIO_BYTES, MAX_SPEECH_CHARS, VoiceTranscriptionError,
+    transcribe_audio, transcription_configured, synthesize_speech,
+)
 
 WEB_DIR = Path(__file__).parent / "web"
 app = FastAPI(title="FA Agent Research Workbench", version="0.6.0",
@@ -49,6 +53,10 @@ async def local_only(request: Request, call_next):
             if parsed.scheme not in {"http", "https"} or parsed.hostname != host or parsed.port != request.url.port:
                 return JSONResponse(status_code=403, content={"detail": "Origin not allowed."})
     return await call_next(request)
+
+
+class SpeakInput(BaseModel):
+    text: str = Field(min_length=1, max_length=MAX_SPEECH_CHARS)
 
 
 class HistoryItem(BaseModel):
@@ -108,6 +116,7 @@ def capabilities():
             {"id":"tradingview","status":"adapter_configured" if os.getenv("FA_TRADINGVIEW_QUOTE_ADAPTER_URL") else "adapter_not_configured"},
         ],
         "voice_transcription_configured": transcription_configured(),
+        "voice_replies_configured": transcription_configured(),
         "mode": "local_only",
     }
 
@@ -153,6 +162,18 @@ async def transcribe_voice(file: UploadFile = File(...)):
     except VoiceTranscriptionError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return {"text": transcript, "requires_review": True}
+
+
+@app.post("/api/speak-reply")
+async def speak_reply(body: SpeakInput):
+    """Opt-in playback of an answer; no research execution or audio persistence."""
+    try:
+        audio = await run_in_threadpool(synthesize_speech, body.text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except VoiceTranscriptionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/analyze")
