@@ -171,3 +171,18 @@ and ratios of long/short accounts separately, with units and timestamps.
 
 These Binance futures measures are not COT positioning categories, and do not
 represent the complete cryptocurrency market. See docs/crypto_derivatives.md.
+
+
+## Voice conversation and Models & Agents workspace (v0.8)
+
+The local FA_Agent UI supports both **manual dictation with transcript review** and an
+explicitly enabled **turn-based spoken conversation** (record -> transcribe -> research ->
+speak -> listen after a pause). It is not a full-duplex realtime audio system.
+
+A dedicated **Models & Agents** workspace allows separate model choices for overall AI
+commentary, speech transcription, speech generation and opt-in per-specialist AI
+commentary. Deterministic agent calculations are **never** replaced by an LLM.
+Settings are stored on the local machine, outside Git, without API keys.
+No SysTrd integration is required.
+
+See [voice and model configuration](docs/voice_models.md).
