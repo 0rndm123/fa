@@ -40,3 +40,18 @@ python -m pytest -q tests/test_voice_input.py
 ```
 
 Os testes não enviam áudio à OpenAI e não precisam de microfone físico. A gravação real deve ser testada manualmente no browser e numa máquina com a chave configurada.
+
+## Respostas faladas (fase seguinte)
+
+Após uma pesquisa bem-sucedida, o botão **Listen** permite ouvir a resposta do FA_Agent.
+A opção **Read answers aloud automatically** é desativada por defeito; quando ativada pelo utilizador, lê as respostas seguintes sem um clique adicional, mas **não** volta a ligar o microfone nem envia perguntas automaticamente. O botão **Stop audio** interrompe a geração/reprodução. A transcrição anterior continua a exigir revisão antes de clicar em **Run analysis**.
+
+A voz utiliza `POST /api/speak-reply`, separado de `/api/transcribe-audio`. O backend recebe até 2200 caracteres de texto por resposta, gera um MP3 com `gpt-4o-mini-tts` e devolve-o com `Cache-Control: no-store`. Textos mais longos são lidos apenas nos primeiros 2200 caracteres, com indicação no estado da interface. Existe um limite de 5 MiB para o MP3. Não se guardam gravações nem MP3 no servidor.
+
+Configuração opcional: `FA_VOICE_NAME=alloy` (voz padrão). Outras vozes aceites incluem `echo`, `fable`, `onyx`, `nova` e `shimmer`. Estas chamadas à API OpenAI podem gerar custos. A síntese não depende do SysTrd.
+
+O contexto de conversação utilizado pelo LLM é filtrado por **classe de ativo e símbolo**. Mensagens antigas sem identificação de ativo não são encaminhadas como histórico para um ativo diferente. A informação falada reflete a resposta já produzida, não inicia uma segunda análise.
+
+**Fora do âmbito desta fase:** microfone de escuta contínua, deteção de pausas e diálogo de áudio em tempo real. Estes comportamentos exigem tratamento adicional de permissões, interrupção, privacidade e validação no browser.
+
+Testes offline: `python -m pytest -q tests/test_voice_input.py tests/test_spoken_replies.py`. Testar manualmente com microfone e altifalantes reais antes de considerar o modo de voz validado.
