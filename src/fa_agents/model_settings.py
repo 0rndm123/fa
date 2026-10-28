@@ -21,7 +21,7 @@ TEXT_MODELS = (
 )
 TRANSCRIPTION_MODELS = ("gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1")
 SPEECH_MODELS = ("gpt-4o-mini-tts", "tts-1", "tts-1-hd")
-VOICES = ("cedar", "alloy", "ash", "ballad", "coral", "echo", "fable",
+VOICES = ("cedar", "marin", "alloy", "ash", "ballad", "coral", "echo", "fable",
           "nova", "onyx", "sage", "shimmer", "verse")
 DEFAULTS = {
     "synthesis": os.getenv("FA_LLM_MODEL", "gpt-4.1-mini"),
