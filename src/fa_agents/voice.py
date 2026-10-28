@@ -83,13 +83,25 @@ def synthesize_speech(text: str) -> bytes:
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Spoken replies require the OpenAI API key and [ai] extra.") from exc
     # Keep a known supported voice by default, with a small allowlist.
-    voice = (os.getenv("FA_VOICE_NAME", "alloy") or "alloy").strip().lower()
+    voice = (os.getenv("FA_VOICE_NAME", "cedar") or "cedar").strip().lower()
     if voice not in {"alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
-                     "onyx", "sage", "shimmer"}:
+                     "onyx", "sage", "shimmer", "verse", "marin", "cedar"}:
         raise ValueError("FA_VOICE_NAME must be a supported OpenAI speech voice.")
     try:
         response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
             model="gpt-4o-mini-tts", voice=voice, input=text, response_format="mp3",
+            instructions=(
+                "Use a natural, composed adult conversational delivery. "
+                "Speak with clear articulation, warm but restrained expression, "
+                "natural intonation and a moderately paced rhythm. "
+                "For Portuguese text, use European Portuguese pronunciation and "
+                "vocabulary, not Brazilian Portuguese. For English text, use "
+                "natural British English pronunciation. "
+                "Pronounce financial figures, percentages, dates, ticker symbols "
+                "and company names carefully. Avoid dramatic narration, exaggerated "
+                "enthusiasm, robotic cadence or artificial pauses. "
+                "Read only the supplied answer; do not add or change facts."
+            ),
         )
         # Only accept a bounded binary response. The audio never reaches disk.
         audio = response.content
