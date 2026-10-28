@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/interactive_chart.js" defer></script>
   <script src="/static/app.js" defer></script>
+  <script src="/static/voice-ui.js" defer></script>
 </head>
 <body>
 <div class="app">
@@ -42,8 +43,14 @@
         </div>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>
+          <div class="voice-controls" aria-label="Voice research conversation">
+            <button type="button" id="voiceMic" class="voice-button" aria-label="Start or finish speaking">🎙 Falar</button>
+            <button type="button" id="voiceStop" class="voice-stop" disabled>Parar áudio</button>
+            <label class="checkline voice-autoline"><input id="voiceAuto" type="checkbox"><span>Continuar por voz (turnos)</span></label>
+          </div>
+          <span id="voiceStatus" class="subtle small" role="status" aria-live="polite">Áudio opcional. O microfone só liga quando iniciares a conversa.</span>
           <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div>
-          <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
+          <span class="subtle small">Enter to send · Shift+Enter for a new line · A voz usa a API OpenAI para transcrição e reprodução, com custos por utilização.</span>
         </form>
       </div>
       <button id="chatExpandRail" type="button" class="expand-rail" title="Restore research chat" aria-label="Restore research chat">☰<span>CHAT</span></button>
