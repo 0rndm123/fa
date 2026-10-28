@@ -52,7 +52,7 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Voice transcription requires the OpenAI API key and the [ai] extra.") from exc
     try:
-        language = (os.getenv("FA_VOICE_LANGUAGE", "pt") or "").strip().lower()
+        language = (os.getenv("FA_VOICE_LANGUAGE", "") or "").strip().lower()
         options = {"model": "gpt-4o-mini-transcribe", "file": (entry[0], data, entry[1])}
         if language:
             options["language"] = language
