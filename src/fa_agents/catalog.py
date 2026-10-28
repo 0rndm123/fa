@@ -52,6 +52,9 @@ def select_for_question(request: ResearchRequest) -> list[str]:
     """
     if request.include_agents is not None:
         return choose_agents(request)
+    from .systrd_backtests import is_backtest_question
+    if is_backtest_question(request.question):
+        return ["backtest"]
     from .cot import is_cot_question
     if is_cot_question(request.question):
         return ["cot"]
