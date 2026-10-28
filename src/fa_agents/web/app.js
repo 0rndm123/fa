@@ -98,7 +98,7 @@ async function toggleVoice(){
       const format=recorder.mimeType||mime||"audio/webm";
       releaseVoiceStream();
       voiceRecorder=null;
-      if(cancelled){voiceBusy=false;$("voiceToggle").disabled=false;voiceButton(false);return}
+      if(cancelled){voiceBusy=false;$("voiceToggle").disabled=false;$("submit").disabled=state.running;voiceButton(false);return}
       try{await sendVoiceRecording(chunks,format)}
       catch(err){voiceStatus("Voice error: "+String(err.message||err))}
       finally{voiceBusy=false;$("voiceToggle").disabled=false;$("submit").disabled=state.running;voiceButton(false)}
