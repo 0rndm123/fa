@@ -54,9 +54,11 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Voice transcription requires the OpenAI API key and the [ai] extra.") from exc
     try:
-        language = (os.getenv("FA_VOICE_LANGUAGE", "") or "").strip().lower()
-        options = {"model": "gpt-4o-mini-transcribe", "file": (entry[0], data, entry[1])}
-        if language:
+        from .model_settings import load_settings
+        config = load_settings()
+        language = (os.getenv("FA_VOICE_LANGUAGE") or config["language"]).strip().lower()
+        options = {"model": config["transcription"], "file": (entry[0], data, entry[1])}
+        if language and language != "auto":
             options["language"] = language
         response = OpenAI(api_key=api_key, timeout=40.0, max_retries=0).audio.transcriptions.create(**options)
         text = str(response.text or "").strip()
@@ -82,15 +84,18 @@ def synthesize_speech(text: str) -> bytes:
         api_key = resolve_api_key()
     except (ValueError, ImportError) as exc:
         raise VoiceTranscriptionError("Spoken replies require the OpenAI API key and [ai] extra.") from exc
-    # Keep a known supported voice by default, with a small allowlist.
-    voice = (os.getenv("FA_VOICE_NAME", "cedar") or "cedar").strip().lower()
-    if voice not in {"alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
-                     "onyx", "sage", "shimmer", "verse", "marin", "cedar"}:
+    from .model_settings import VOICES, load_settings
+    config = load_settings()
+    voice = (os.getenv("FA_VOICE_NAME") or config["voice"]).strip().lower()
+    if voice not in VOICES:
         raise ValueError("FA_VOICE_NAME must be a supported OpenAI speech voice.")
     try:
-        response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
-            model="gpt-4o-mini-tts", voice=voice, input=text, response_format="mp3",
-            instructions=(
+        options = {
+            "model": config["speech"], "voice": voice,
+            "input": text, "response_format": "mp3"
+        }
+        if config["speech"] == "gpt-4o-mini-tts":
+            options["instructions"] = (
                 "Use a natural, composed adult conversational delivery. "
                 "Speak with clear articulation, warm but restrained expression, "
                 "natural intonation and a moderately paced rhythm. "
@@ -101,7 +106,9 @@ def synthesize_speech(text: str) -> bytes:
                 "and company names carefully. Avoid dramatic narration, exaggerated "
                 "enthusiasm, robotic cadence or artificial pauses. "
                 "Read only the supplied answer; do not add or change facts."
-            ),
+            )
+        response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
+            **options
         )
         # Only accept a bounded binary response. The audio never reaches disk.
         audio = response.content

@@ -8,12 +8,14 @@
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/interactive_chart.js" defer></script>
   <script src="/static/app.js" defer></script>
+  <script src="/static/model-settings.js" defer></script>
+  <script src="/static/voice-turns.js" defer></script>
 </head>
 <body>
 <div class="app">
   <header class="topbar">
     <div class="brand"><div class="brand-mark">FA</div><div><strong>FA Agent</strong><small>Financial Research Workbench</small></div></div>
-    <div class="top-controls"><span class="pill live-pill">LOCAL WORKSPACE</span><span id="connectionStatus" class="muted small">Loading capabilities…</span></div>
+    <div class="top-controls"><span class="pill live-pill">LOCAL WORKSPACE</span><span id="connectionStatus" class="muted small">Loading capabilities…</span><nav class="workspace-switch" role="tablist" aria-label="Workspace views"><button id="researchViewTab" type="button" role="tab" aria-selected="true">Research</button><button id="modelsViewTab" type="button" role="tab" aria-selected="false">Models &amp; Agents</button></nav></div>
   </header>
   <section class="workspace" id="workspace">
     <aside id="chatPane" class="chat-pane" aria-label="Research conversation">
@@ -44,6 +46,8 @@
           <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>
           <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><div class="composer-send"><button type="button" id="voiceToggle" class="voice-button" aria-label="Start voice recording" aria-pressed="false" title="Record a question (max 90 seconds)">🎙 Voice</button><button type="button" id="speakReply" class="voice-button" disabled aria-label="Read the last answer aloud" title="Read the last answer aloud">▶ Listen</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div></div>
           <label class="checkline voice-reply-optin"><input type="checkbox" id="autoSpeak" disabled><span>Read answers aloud automatically (AI-generated voice; uses OpenAI API)</span></label>
+          <div class="voice-turn-controls" aria-label="Spoken conversation"><button type="button" id="voiceMic" class="voice-button" aria-label="Start spoken conversation">🎙 Conversa</button><button type="button" id="voiceStop" class="voice-stop" disabled>Parar conversa</button><label class="checkline"><input type="checkbox" id="voiceAuto"><span>Continuar por voz após a resposta</span></label></div>
+          <span id="voiceConversationStatus" class="subtle small" role="status" aria-live="polite">Conversação por voz opcional. A aplicação só ativa o microfone após um clique.</span>
           <span id="voiceStatus" class="subtle small" role="status" aria-live="polite">Record a question, review the transcription, then send. Audio is sent to OpenAI only for transcription.</span>
           <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
         </form>
@@ -52,6 +56,12 @@
     </aside>
     <div class="resize-handle" id="resizeHandle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize chat and results"></div>
     <main id="resultsPane" class="results-pane">
+      <section id="modelSettingsPane" class="model-settings-pane hidden" role="tabpanel" aria-label="Model and agent settings">
+        <h1>Modelos e agentes</h1>
+        <p class="muted-note">Configuração local do FA_Agent. As escolhas são guardadas no teu computador e não alteram os cálculos determinísticos.</p>
+        <div id="modelSettingsBody">A carregar configurações…</div>
+        <div class="model-settings-actions"><button type="button" id="modelSettingsSave" class="primary">Guardar configurações</button><button type="button" id="modelSettingsReset" class="outline">Repor valores predefinidos</button><span id="modelSettingsStatus" role="status" class="muted-note"></span></div>
+      </section>
       <div class="results-head">
         <div><div class="eyebrow">RESEARCH OUTPUT</div><h1 id="resultTitle">Analysis workspace</h1><p class="subtle" id="resultSubtitle">Run an analysis to view tables, charts, sources and specialist outputs.</p></div>
         <div class="result-actions"><span id="reportBadge" class="status-pill">READY</span><button id="downloadReport" type="button" class="outline" disabled>Export JSON ↓</button></div>
