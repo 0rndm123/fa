@@ -8,6 +8,8 @@ from __future__ import annotations
 import os
 
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
+MAX_SPEECH_CHARS = 2200
+MAX_SPEECH_BYTES = 5 * 1024 * 1024
 SUPPORTED_MIME = {
     "audio/webm": ("recording.webm", "audio/webm"),
     "audio/ogg": ("recording.ogg", "audio/ogg"),
@@ -66,3 +68,36 @@ def transcribe_audio(data: bytes, content_type: str | None) -> str:
     except Exception as exc:
         # Do not disclose API credentials or provider response details in the browser.
         raise VoiceTranscriptionError("Voice transcription provider unavailable. Try again.") from exc
+
+
+def synthesize_speech(text: str) -> bytes:
+    """Generate a short spoken answer on demand. Never persist generated audio."""
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("A non-empty spoken answer is required.")
+    if len(text) > MAX_SPEECH_CHARS:
+        raise ValueError("Spoken answer exceeds the 2200-character limit.")
+    try:
+        from .llm import resolve_api_key
+        from openai import OpenAI
+        api_key = resolve_api_key()
+    except (ValueError, ImportError) as exc:
+        raise VoiceTranscriptionError("Spoken replies require the OpenAI API key and [ai] extra.") from exc
+    # Keep a known supported voice by default, with a small allowlist.
+    voice = (os.getenv("FA_VOICE_NAME", "alloy") or "alloy").strip().lower()
+    if voice not in {"alloy", "ash", "ballad", "coral", "echo", "fable", "nova",
+                     "onyx", "sage", "shimmer"}:
+        raise ValueError("FA_VOICE_NAME must be a supported OpenAI speech voice.")
+    try:
+        response = OpenAI(api_key=api_key, timeout=45.0, max_retries=0).audio.speech.create(
+            model="gpt-4o-mini-tts", voice=voice, input=text, response_format="mp3",
+        )
+        # Only accept a bounded binary response. The audio never reaches disk.
+        audio = response.content
+        if not isinstance(audio, bytes) or not audio or len(audio) > MAX_SPEECH_BYTES:
+            raise VoiceTranscriptionError("Spoken reply audio was empty or too large.")
+        return audio
+    except VoiceTranscriptionError:
+        raise
+    except Exception as exc:
+        # API exceptions can contain sensitive request details.
+        raise VoiceTranscriptionError("Spoken reply provider unavailable. Try again.") from exc
