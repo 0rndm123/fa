@@ -23,6 +23,7 @@ def isolated(tmp_path, monkeypatch):
 def test_defaults_and_per_agent_model_persist(isolated):
     original = model_settings.load_settings()
     assert original["agent_ai_enabled"] == []
+    assert original["voice"] == "cedar"
     original["synthesis"] = "gpt-4o-mini"
     original["speech"] = "tts-1"
     original["transcription"] = "gpt-4o-transcribe"
