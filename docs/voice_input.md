@@ -48,10 +48,17 @@ A opção **Read answers aloud automatically** é desativada por defeito; quando
 
 A voz utiliza `POST /api/speak-reply`, separado de `/api/transcribe-audio`. O backend recebe até 2200 caracteres de texto por resposta, gera um MP3 com `gpt-4o-mini-tts` e devolve-o com `Cache-Control: no-store`. Textos mais longos são lidos apenas nos primeiros 2200 caracteres, com indicação no estado da interface. Existe um limite de 5 MiB para o MP3. Não se guardam gravações nem MP3 no servidor.
 
-Configuração opcional: `FA_VOICE_NAME=alloy` (voz padrão). Outras vozes aceites incluem `echo`, `fable`, `onyx`, `nova` e `shimmer`. Estas chamadas à API OpenAI podem gerar custos. A síntese não depende do SysTrd.
+A voz predefinida é **`cedar`**, recomendada pela OpenAI para qualidade elevada. A geração usa `gpt-4o-mini-tts` com instruções para dicção natural, português europeu em português e inglês britânico em inglês. A voz é gerada por IA e não é uma cópia da voz utilizada no modo Live do ChatGPT. Configuração opcional: `FA_VOICE_NAME=marin` (ou `cedar`, `echo`, `onyx`, `nova`, etc.). Estas chamadas à API OpenAI podem gerar custos. A síntese não depende do SysTrd.
 
 O contexto de conversação utilizado pelo LLM é filtrado por **classe de ativo e símbolo**. Mensagens antigas sem identificação de ativo não são encaminhadas como histórico para um ativo diferente. A informação falada reflete a resposta já produzida, não inicia uma segunda análise.
 
 **Fora do âmbito desta fase:** microfone de escuta contínua, deteção de pausas e diálogo de áudio em tempo real. Estes comportamentos exigem tratamento adicional de permissões, interrupção, privacidade e validação no browser.
 
 Testes offline: `python -m pytest -q tests/test_voice_input.py tests/test_spoken_replies.py`. Testar manualmente com microfone e altifalantes reais antes de considerar o modo de voz validado.
+
+
+### Modelo de voz e evolução futura
+
+Esta versão utiliza a API TTS para ler a resposta textual dos agentes. A OpenAI recomenda `cedar` ou `marin` na geração de voz disponível nesta API. **Não é a mesma infraestrutura de conversação contínua do ChatGPT**. Para obter interrupções naturais, diálogo em simultâneo e menor sensação de turnos separados, uma fase futura poderá usar `gpt-live-1` (com WebRTC e delegação para o motor independente do FA_Agent).
+
+A documentação da OpenAI assinala `gpt-4o-mini-tts` como *deprecated*, com descontinuação programada para 6 de janeiro de 2027. A migração posterior terá de usar um fluxo diferente de Realtime/Live, em vez de trocar apenas o ID do modelo de `/audio/speech`. Esta alteração mantém o fluxo atual e a portabilidade do FA_Agent; não tenta substituir um modelo TTS por outro que não funcione nesse endpoint.
