@@ -197,6 +197,34 @@ class CriticalReview(BaseModel):
     ])
 
 
+class EvidencePoint(BaseModel):
+    """A numeric observation with an exact matching source identifier."""
+    agent_id: str
+    source_id: str
+    metric: str
+    period: str
+    value: float
+    unit: str
+
+
+class ResearchGap(BaseModel):
+    category: str
+    priority: Literal["high", "medium", "low"]
+    reason: str
+    next_action: str
+    suggested_agent: str | None = None
+
+
+class ResearchBrief(BaseModel):
+    """Evidence and missing checks, not an investment decision."""
+    objective: Literal["investment_decision", "technical_research",
+                       "positioning_research", "financial_research", "general_research"]
+    assessment: Literal["descriptive_only", "insufficient_evidence"]
+    evidence_points: list[EvidencePoint] = Field(default_factory=list)
+    open_questions: list[ResearchGap] = Field(default_factory=list)
+    method: str = "deterministic, original-source linked and question-specific"
+
+
 class ResearchReport(BaseModel):
     schema_version: str = "0.7"
     request: ResearchRequest
@@ -211,3 +239,4 @@ class ResearchReport(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     research_plan: ResearchPlan | None = None
     critical_review: CriticalReview | None = None
+    research_brief: ResearchBrief | None = None
