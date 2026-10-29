@@ -12,38 +12,10 @@ import math
 import os
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
-from .models import AgentResult, AssetClass, ResearchRequest
-
+from .models import (AgentResult, AssetClass, ResearchRequest, ResearchPlan,
+                     CriticalFinding, CriticalReview)
 
 CoordinationMode = Literal["standard", "adaptive", "assisted"]
-
-
-class ResearchPlan(BaseModel):
-    mode: CoordinationMode = "adaptive"
-    initial_agents: list[str] = Field(default_factory=list)
-    followup_agents: list[str] = Field(default_factory=list)
-    notes: list[str] = Field(default_factory=list)
-    max_followup_agents: int = 2
-
-
-class CriticalFinding(BaseModel):
-    severity: Literal["high", "medium", "info"]
-    category: Literal["coverage", "provenance", "temporal", "consistency", "interpretation"]
-    message: str
-    agent_ids: list[str] = Field(default_factory=list)
-    source_ids: list[str] = Field(default_factory=list)
-
-
-class CriticalReview(BaseModel):
-    status: Literal["clear", "caution", "insufficient"]
-    findings: list[CriticalFinding] = Field(default_factory=list)
-    method: str = "deterministic evidence and cross-specialist checks"
-    limitations: list[str] = Field(default_factory=lambda: [
-        "No new independent sources are fetched by the reviewer.",
-        "A clean review does not validate investment suitability, valuations or trading signals.",
-    ])
 
 
 # The only second-stage tools supported today. No 'valuation' or 'industry'
