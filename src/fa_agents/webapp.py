@@ -49,6 +49,9 @@ async def local_only(request: Request, call_next):
     if client not in {"127.0.0.1", "::1", "testclient"}:
         return JSONResponse(status_code=403, content={"detail": "Localhost access only."})
 
+    if os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() not in {"", "cloudflare_access"}:
+        return JSONResponse(status_code=503, content={"detail": "Unsupported remote auth mode."})
+
     if cloudflare_access.remote_mode():
         try:
             team, aud, expected_host = cloudflare_access.remote_configuration()
