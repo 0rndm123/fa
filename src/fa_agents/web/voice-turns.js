@@ -21,7 +21,10 @@
   function setPhase(next, message) {
     phase = next;
     status.textContent = message;
-    mic.textContent = next === "recording" ? "■ Terminar pergunta" : "🎙 Falar";
+    mic.classList.toggle("active", next !== "idle");
+    mic.setAttribute("aria-pressed", String(next !== "idle"));
+    mic.setAttribute("aria-label", next === "idle" ? "Iniciar conversa por voz" : "Conversa por voz ativa");
+    document.getElementById("voiceTurnControls").classList.toggle("hidden", next === "idle");
     mic.disabled = next === "transcribing" || next === "researching" || next === "speaking" || state.running;
     stop.disabled = next === "idle" && !auto.checked;
   }
@@ -172,7 +175,7 @@
   }
 
   async function startRecording(ticket) {
-    if (ticket !== session || phase === "recording" || state.running) return;
+    if (ticket !== session || phase === "recording" || state.running || voiceBusy || voiceRecorder?.state === "recording") return;
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
       setPhase("idle", "O navegador não suporta gravação de áudio neste contexto.");
       auto.checked = false;
