@@ -149,6 +149,22 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
             "The investigation contains no dated source records.",
             "Configure a relevant supported data source or supply verified records.")
 
+    fundamental = next((r for r in results if r.agent_id in
+                        {"fundamental", "financial_performance"} and r.evidence), None)
+    if fundamental and objective in {"investment_decision", "financial_research"}:
+        fcf = fundamental.metrics.get("fcf_proxy_usd")
+        growth = fundamental.metrics.get("annual_revenue_growth_pct")
+        if isinstance(fcf, (int, float)) and not isinstance(fcf, bool) and isfinite(fcf) and fcf < 0:
+            gap("negative_fcf", "medium",
+                "Reported operating cash flow less selected capex is negative; this is a proxy, not audited free cash flow.",
+                "Verify cash flow statement classification and whether the effect is recurring.",
+                "fundamental")
+        if isinstance(growth, (int, float)) and not isinstance(growth, bool) and isfinite(growth) and growth < 0:
+            gap("declining_revenue", "medium",
+                "The reported annual revenue-growth metric is negative for the analysed periods.",
+                "Examine reporting-period comparability and the causes of lower revenue.",
+                "financial_performance")
+
     if demo:
         gap("synthetic_data", "high",
             "Demo observations are synthetic fixtures, not live market evidence.",
@@ -159,6 +175,7 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
         objective=objective,
         evidence_points=points,
         open_questions=gaps[:8],
-        assessment=("insufficient_evidence" if not points else "descriptive_only"),
+        assessment=("insufficient_evidence" if not any(r.evidence for r in results)
+                    else "descriptive_only"),
         method="deterministic, original-source linked and question-specific",
     )
