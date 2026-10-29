@@ -104,6 +104,7 @@ class AnalyzeInput(BaseModel):
     cot_market_code: str | None = Field(default=None, max_length=12)
     cot_report_type: Literal["tff","disaggregated","legacy"] | None = None
     history: list[HistoryItem] = Field(default_factory=list, max_length=8)
+    coordination: Literal["standard", "adaptive", "assisted"] = "adaptive"
 
     @field_validator("symbol")
     @classmethod
@@ -276,13 +277,17 @@ def analyze(payload: AnalyzeInput):
             symbol=resolved_symbol, asset_class=resolved_class,
             exchange=payload.exchange, question=payload.question,
             horizon=payload.horizon, include_agents=payload.agents,
+            coordination=payload.coordination,
             cot_market_code=payload.cot_market_code,
             cot_report_type=payload.cot_report_type,
         )
         selected = select_for_question(request)
         request = request.model_copy(update={"include_agents": selected})
         services = Services.build(payload.mode, str(path) if path else None)
-        state = build_graph(services).invoke({"request": request.model_dump(mode="json")})
+        state = build_graph(services).invoke({
+            "request": request.model_dump(mode="json"),
+            "automatic_selection": payload.agents is None,
+        })
         report = ResearchReport.model_validate(state["report"])
         if payload.llm:
             # Context is untrusted text and only assists follow-up interpretation.

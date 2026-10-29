@@ -72,3 +72,25 @@
 .voice-turn-controls>.voice-button{font-size:12px}
 .voice-turn-controls .checkline{font-size:11px;gap:4px}
 #voiceConversationStatus{line-height:1.35}
+
+/* Compact chat-style dictation and voice conversation controls. */
+.fa-voice-icon{width:37px;height:37px;min-width:37px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid #40536b;background:#203040;color:#e3edf7;padding:0;transition:background .15s,border-color .15s}
+.fa-voice-icon:hover{background:#2b4055;border-color:#7ba8d8}
+.fa-voice-icon.recording{background:#5c2d3a;border-color:#f092a4;color:#fff}
+.fa-conversation{background:#366fe7;border-color:#4886fb;color:white}
+.fa-conversation:hover,.fa-conversation.active{background:#4786f7;border-color:#a2c6ff;color:white}
+.fa-voice-icon.playing{background:#32598e;color:white}
+.fa-wave-mini{display:flex;align-items:center;justify-content:center;gap:2px;height:22px}
+.fa-wave-mini i{display:block;width:2px;height:8px;border-radius:2px;background:currentColor}
+.fa-wave-mini i:nth-child(2),.fa-wave-mini i:nth-child(4){height:15px}
+.fa-wave-mini i:nth-child(3){height:20px}
+.fa-conversation.active .fa-wave-mini i{animation:fa-voice-bars .85s ease-in-out infinite alternate}
+.fa-conversation.active .fa-wave-mini i:nth-child(2){animation-delay:-.3s}
+.fa-conversation.active .fa-wave-mini i:nth-child(3){animation-delay:-.55s}
+.fa-conversation.active .fa-wave-mini i:nth-child(4){animation-delay:-.18s}
+.fa-conversation.active .fa-wave-mini i:nth-child(5){animation-delay:-.42s}
+@keyframes fa-voice-bars{from{transform:scaleY(.45)}to{transform:scaleY(1)}}
+.fa-send{width:37px;height:37px;display:inline-flex;align-items:center;justify-content:center;padding:0;border-radius:50%}
+.voice-turn-controls{padding:7px 9px;border:1px solid #365273;background:#1b3046;border-radius:9px;gap:10px}
+.voice-turn-controls #voiceConversationStatus{flex:1;min-width:90px}
+@media(prefers-reduced-motion:reduce){.fa-conversation.active .fa-wave-mini i{animation:none}}

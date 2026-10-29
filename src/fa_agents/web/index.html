@@ -44,10 +44,25 @@
         </div>
         <form id="chatForm" class="composer">
           <textarea id="question" rows="3" maxlength="6000" required placeholder="Analyze the company’s revenue, profitability, cash generation and key risks…"></textarea>
-          <div class="composer-actions"><button type="button" id="clearChat" class="text-button">Clear conversation</button><div class="composer-send"><button type="button" id="voiceToggle" class="voice-button" aria-label="Start voice recording" aria-pressed="false" title="Record a question (max 90 seconds)">🎙 Voice</button><button type="button" id="speakReply" class="voice-button" disabled aria-label="Read the last answer aloud" title="Read the last answer aloud">▶ Listen</button><button type="submit" id="submit" class="primary">Run analysis <span aria-hidden="true">↗</span></button></div></div>
+          <div class="composer-actions">
+            <button type="button" id="clearChat" class="text-button">Clear</button>
+            <div class="composer-send">
+              <button type="button" id="voiceToggle" class="fa-voice-icon fa-dictation" aria-label="Ditar mensagem" aria-pressed="false" title="Ditar mensagem e rever transcrição (até 90 segundos)">
+                <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg>
+              </button>
+              <button type="button" id="voiceMic" class="fa-voice-icon fa-conversation" aria-label="Iniciar conversa por voz" aria-pressed="false" title="Conversa por voz, com resposta falada e perguntas sucessivas">
+                <span class="fa-wave-mini" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+              </button>
+              <button type="button" id="speakReply" class="fa-voice-icon fa-speak" disabled aria-label="Ouvir a última resposta" title="Ouvir a última resposta"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15 9a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg></button>
+              <button type="submit" id="submit" class="primary fa-send" aria-label="Enviar mensagem"><svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7M12 19V5"/></svg></button>
+            </div>
+          </div>
           <label class="checkline voice-reply-optin"><input type="checkbox" id="autoSpeak" disabled><span>Read answers aloud automatically (AI-generated voice; uses OpenAI API)</span></label>
-          <div class="voice-turn-controls" aria-label="Spoken conversation"><button type="button" id="voiceMic" class="voice-button" aria-label="Start spoken conversation">🎙 Conversa</button><button type="button" id="voiceStop" class="voice-stop" disabled>Parar conversa</button><label class="checkline"><input type="checkbox" id="voiceAuto"><span>Continuar por voz após a resposta</span></label></div>
-          <span id="voiceConversationStatus" class="subtle small" role="status" aria-live="polite">Conversação por voz opcional. A aplicação só ativa o microfone após um clique.</span>
+          <div class="voice-turn-controls hidden" id="voiceTurnControls">
+            <span id="voiceConversationStatus" class="subtle small" role="status" aria-live="polite">Conversa por voz pronta</span>
+            <button type="button" id="voiceStop" class="voice-stop" disabled>Terminar conversa</button>
+            <label class="checkline"><input type="checkbox" id="voiceAuto" checked><span>Continuar por voz</span></label>
+          </div>
           <span id="voiceStatus" class="subtle small" role="status" aria-live="polite">Record a question, review the transcription, then send. Audio is sent to OpenAI only for transcription.</span>
           <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
         </form>

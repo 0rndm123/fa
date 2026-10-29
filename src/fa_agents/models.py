@@ -28,6 +28,7 @@ class ResearchRequest(BaseModel):
     exclude_agents: list[str] = Field(default_factory=list)
     cot_market_code: str | None = None
     cot_report_type: Literal["tff","disaggregated","legacy"] | None = None
+    coordination: Literal["standard", "adaptive", "assisted"] = "adaptive"
 
     @field_validator("symbol")
     @classmethod
@@ -169,6 +170,33 @@ class QuoteResult(BaseModel):
     attempts: list[ProviderAttempt] = Field(default_factory=list)
 
 
+
+class ResearchPlan(BaseModel):
+    mode: Literal["standard", "adaptive", "assisted"] = "adaptive"
+    initial_agents: list[str] = Field(default_factory=list)
+    followup_agents: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+    max_followup_agents: int = 2
+
+
+class CriticalFinding(BaseModel):
+    severity: Literal["high", "medium", "info"]
+    category: Literal["coverage", "provenance", "temporal", "consistency", "interpretation"]
+    message: str
+    agent_ids: list[str] = Field(default_factory=list)
+    source_ids: list[str] = Field(default_factory=list)
+
+
+class CriticalReview(BaseModel):
+    status: Literal["clear", "caution", "insufficient"]
+    findings: list[CriticalFinding] = Field(default_factory=list)
+    method: str = "deterministic evidence and cross-specialist checks"
+    limitations: list[str] = Field(default_factory=lambda: [
+        "No new independent sources are fetched by the reviewer.",
+        "A clean review does not validate investment suitability, valuations or trading signals.",
+    ])
+
+
 class ResearchReport(BaseModel):
     schema_version: str = "0.7"
     request: ResearchRequest
@@ -181,3 +209,5 @@ class ResearchReport(BaseModel):
     market_quote: QuoteResult | None = None
     llm_commentary: str | None = None
     warnings: list[str] = Field(default_factory=list)
+    research_plan: ResearchPlan | None = None
+    critical_review: CriticalReview | None = None
