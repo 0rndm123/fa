@@ -40,15 +40,37 @@ _uploaded_prices: dict[str, Path] = {}
 
 @app.middleware("http")
 async def local_only(request: Request, call_next):
-    """Require loopback requests, and same-origin for browser API mutations."""
+    """Local by default; Cloudflare mode enforces signed Access JWT on every route."""
     from fastapi.responses import JSONResponse
+    from urllib.parse import urlsplit
+    from . import cloudflare_access
+
     client = request.client.host if request.client else None
     if client not in {"127.0.0.1", "::1", "testclient"}:
         return JSONResponse(status_code=403, content={"detail": "Localhost access only."})
-    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+
+    if cloudflare_access.remote_mode():
+        try:
+            team, aud, expected_host = cloudflare_access.remote_configuration()
+        except ValueError:
+            return JSONResponse(status_code=503, content={"detail": "Remote Access configuration is incomplete."})
+        # The local listener cannot be used as an unauthenticated tunnel bypass.
+        # Host matching and a cryptographically verified Cloudflare Access JWT
+        # are both required, even for static content and read-only endpoints.
+        if request.url.hostname != expected_host:
+            return JSONResponse(status_code=403, content={"detail": "Remote hostname not allowed."})
+        token = request.headers.get("Cf-Access-Jwt-Assertion", "")
+        if not cloudflare_access.verify_access_jwt(token, team=team, aud=aud):
+            return JSONResponse(status_code=401, content={"detail": "Cloudflare Access authentication required."})
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            origin = request.headers.get("origin")
+            if origin:
+                parsed = urlsplit(origin)
+                if parsed.scheme != "https" or parsed.hostname != expected_host or parsed.port is not None:
+                    return JSONResponse(status_code=403, content={"detail": "Origin not allowed."})
+    elif request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
         if origin:
-            from urllib.parse import urlsplit
             parsed = urlsplit(origin)
             host = request.url.hostname
             if parsed.scheme not in {"http", "https"} or parsed.hostname != host or parsed.port != request.url.port:
