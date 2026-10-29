@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--exchange")
     parser.add_argument("--horizon", choices=["short", "medium", "long"], default="medium")
     parser.add_argument("--question", default="Analyze this financial instrument.")
+    parser.add_argument("--coordination", choices=["standard", "adaptive", "assisted"], default="adaptive")
     parser.add_argument("--include-agent", action="append", dest="include_agents")
     parser.add_argument("--exclude-agent", action="append", default=[], dest="exclude_agents")
     parser.add_argument("--prices", help="Daily CSV with date and close columns")
@@ -37,7 +38,7 @@ def main() -> None:
     try:
         request = ResearchRequest(
             symbol=symbol, asset_class=a.asset_class, exchange=a.exchange,
-            question=a.question, horizon=a.horizon,
+            question=a.question, horizon=a.horizon, coordination=a.coordination,
             as_of=datetime.fromisoformat(a.as_of) if a.as_of else None,
             include_agents=a.include_agents, exclude_agents=a.exclude_agents,
         )
