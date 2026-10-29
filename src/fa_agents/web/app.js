@@ -42,8 +42,8 @@ function voiceButton(recording){
   const button=$("voiceToggle");
   button.classList.toggle("recording",recording);
   button.setAttribute("aria-pressed",String(recording));
-  button.setAttribute("aria-label",recording?"Stop voice recording":"Start voice recording");
-  button.textContent=recording?"■ Stop recording":"🎙 Voice";
+  button.setAttribute("aria-label",recording?"Terminar ditado":"Ditar mensagem");
+  button.title=recording?"Terminar e transcrever":"Ditar e rever transcrição";
 }
 function releaseVoiceStream(){
   if(voiceTimeout!==null){clearTimeout(voiceTimeout);voiceTimeout=null}
@@ -76,7 +76,7 @@ async function sendVoiceRecording(parts,mime){
 async function toggleVoice(){
   if(voiceRecorder?.state==="recording"){stopVoiceRecording();return}
   stopSpeech();
-  if(voiceBusy||state.running)return;
+  if(voiceBusy||state.running||window.FAVoiceDialogue?.active())return;
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==="undefined"){
     voiceStatus("This browser does not support microphone recording. Use keyboard dictation instead.");
     return;
@@ -138,7 +138,7 @@ function stopSpeech(){
   if(speechRequest){speechRequest.abort();speechRequest=null}
   if(speechPlayer){speechPlayer.pause();speechPlayer.removeAttribute("src");speechPlayer.load();speechPlayer=null}
   if(speechUrl){URL.revokeObjectURL(speechUrl);speechUrl=null}
-  $("speakReply").textContent="▶ Listen";
+  $("speakReply").classList.remove("playing");
   $("speakReply").setAttribute("aria-label","Read the last answer aloud");
   syncSpeechControls();
 }
@@ -149,7 +149,7 @@ async function speakLatestAnswer(){
   const isTruncated=lastSpokenAnswer.length>2200;
   speechRequest=new AbortController();
   const generation=++speechGeneration;
-  $("speakReply").textContent="■ Stop audio";
+  $("speakReply").classList.add("playing");
   $("speakReply").setAttribute("aria-label","Stop spoken answer");
   $("speakReply").disabled=false;
   voiceStatus("Generating spoken answer…"+(isTruncated?" (first 2200 characters)":""));
