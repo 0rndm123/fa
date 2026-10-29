@@ -15,7 +15,8 @@ from langgraph.types import Send
 from .agents import Services, run_specialist, review
 from .catalog import choose_agents
 from .coordinator import assess_followups, critical_review, initial_plan
-from .models import ResearchRequest, ResearchPlan, AgentResult, ResearchReport
+from .research_brief import build_research_brief
+from .models import ResearchRequest, ResearchPlan, AgentResult, ResearchReport, CriticalReview
 
 
 class State(TypedDict, total=False):
@@ -130,6 +131,9 @@ def build_graph(services: Services | None = None):
         sources = sum(len(r.evidence) for r in results)
         warnings = list(state.get("warnings", []))
         audit = state.get("critical_review", {})
+        brief = build_research_brief(
+            request, results, CriticalReview.model_validate(audit), demo=services.demo,
+        )
         if any(f.get("severity") == "high" for f in audit.get("findings", [])):
             warnings.append("Critical review identified high-severity source or consistency gaps.")
             if status == "completed":
@@ -141,6 +145,7 @@ def build_graph(services: Services | None = None):
             planned_agents=state["planned_agents"], results=results,
             research_plan=ResearchPlan.model_validate(state["coordination_plan"]),
             critical_review=audit,
+            research_brief=brief,
             warnings=warnings,
             summary=(f"{request.symbol}: {completed} completed, {partial} partial, "
                      f"{unavailable} unavailable specialist(s); {sources} source records. "
