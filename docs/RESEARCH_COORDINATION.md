@@ -50,3 +50,17 @@ Testes:
 
     python -m pytest -q tests/test_research_coordination.py tests/test_compact_voice_ui.py
     python -m pytest -q
+
+## Research Brief – evidência e próximos passos
+
+Depois da validação crítica, o sistema produz automaticamente `research_brief`, sem invocar novos fornecedores nem acrescentar custos de LLM:
+
+- **Objetivo reconhecido**: decisão de investimento, análise financeira, técnica, posicionamento ou investigação geral.
+- **Observações fundamentadas**: cada registo numérico é incluído apenas quando o seu `source_id` coincide exatamente com uma evidência do próprio especialista. Não se atribuem métricas sem ligação explícita à fonte.
+- **Data de referência**: com `as_of`, são excluídos do resumo registos divulgados ou observados depois dessa data, bem como observações com períodos posteriores. O Critical Reviewer continua a assinalar esses casos.
+- **Verificações seguintes**: identificam, por ordem de prioridade, valorização, risco/retorno, demonstrações financeiras, dívida, histórico de preços, qualidade das fontes e limitações de notícias e documentos. Quedas de receita ou FCF negativo só produzem perguntas para investigação, nunca previsões ou ordens.
+- **Modo Demo**: contém aviso explícito de dados sintéticos. A ausência de fontes válidas resulta em `insufficient_evidence`; a sua presença só permite `descriptive_only`, nunca uma classificação de compra/venda.
+
+O separador existente **Overview** mostra um quadro curto com os valores datados e a respetiva identificação da fonte, seguido das principais verificações pendentes. O modo `AI commentary` recebe também estas lacunas para contrariar conclusões não suportadas. Os especialistas existentes, o launcher Cloudflare e a interface de voz não foram alterados.
+
+Testar com `python -m pytest -q tests/test_research_brief.py`. A análise de fontes reais e a validação do browser continuam a exigir testes na máquina do utilizador.
