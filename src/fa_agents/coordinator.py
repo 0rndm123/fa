@@ -118,8 +118,10 @@ def assess_followups(request: ResearchRequest, plan: ResearchPlan,
     if plan.mode == "assisted":
         try:
             chosen = _llm_choose_followups(request.question, choices, results)
+            if any(name not in choices for name in chosen) or len(chosen) > 2:
+                raise ValueError("Unauthorized follow-up requested.")
             updated.notes.append("Optional model selected bounded allowlisted follow-up specialists.")
-        except (ValueError, RuntimeError, ImportError, OSError, KeyError, TypeError) as exc:
+        except Exception:
             # No provider detail or secret should be returned to reports.
             chosen = choices[:2]
             updated.notes.append(
@@ -199,8 +201,8 @@ def critical_review(request: ResearchRequest, results: list[AgentResult]) -> Cri
             v = r.metrics.get(metric)
             if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
                 continue
-            period = str(r.metrics.get(metric.replace("_usd", "") + "_period") or
-                         r.metrics.get("revenue_period") or "") if metric.endswith("_usd") else ""
+            # Require the metric's own period; do not infer one from revenue.
+            period = str(r.metrics.get(metric.replace("_usd", "") + "_period") or "") if metric.endswith("_usd") else ""
             if not period:
                 continue
             key = (metric, period)
