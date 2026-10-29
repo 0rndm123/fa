@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from datetime import datetime, timezone
 from math import isfinite
 
 from .models import (AgentResult, CriticalReview, EvidencePoint, ResearchBrief,
@@ -47,6 +48,24 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
     seen: set[str] = set()
     by_agent = {r.agent_id: r for r in results}
 
+    def eligible(evidence) -> bool:
+        if request.as_of is None:
+            return True
+        cutoff = request.as_of
+        cutoff = (cutoff.replace(tzinfo=timezone.utc) if cutoff.tzinfo is None
+                  else cutoff.astimezone(timezone.utc))
+        for timestamp in (evidence.published_at, evidence.observed_at):
+            if timestamp is None:
+                continue
+            when = (timestamp.replace(tzinfo=timezone.utc) if timestamp.tzinfo is None
+                    else timestamp.astimezone(timezone.utc))
+            if when > cutoff:
+                return False
+        return True
+
+    eligible_evidence = {r.agent_id: [e for e in r.evidence if eligible(e)]
+                         for r in results}
+
     def gap(category: str, priority: str, reason: str, next_action: str,
             agent: str | None = None) -> None:
         if category in seen:
@@ -62,13 +81,28 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
     for r in results:
         if r.status not in {"completed", "partial"}:
             continue
-        source_ids = {e.source_id for e in r.evidence}
+        source_ids = {e.source_id for e in eligible_evidence[r.agent_id]}
         for observation in sorted(r.observations,
                                   key=lambda x: (x.period_end, x.metric), reverse=True):
             if observation.source_id not in source_ids:
                 continue
             if not isfinite(observation.value):
                 continue
+            if request.as_of is not None:
+                try:
+                    period_date = datetime.fromisoformat(
+                        observation.period_end.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    continue
+                cutoff = request.as_of
+                cutoff = (cutoff.replace(tzinfo=timezone.utc) if cutoff.tzinfo is None
+                          else cutoff.astimezone(timezone.utc))
+                period_date = (period_date.replace(tzinfo=timezone.utc)
+                               if period_date.tzinfo is None
+                               else period_date.astimezone(timezone.utc))
+                if period_date > cutoff:
+                    continue
             if len([p for p in points if p.agent_id == r.agent_id]) >= 2:
                 break
             points.append(EvidencePoint(
@@ -100,7 +134,7 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
         financials = [r for r in results if r.agent_id in
                       {"financial_data", "fundamental", "financial_performance"}]
         if objective in {"investment_decision", "financial_research"} and not any(
-            r.evidence and r.status in {"completed", "partial"} for r in financials
+            eligible_evidence[r.agent_id] and r.status in {"completed", "partial"} for r in financials
         ):
             gap("financial_statements", "high",
                 "No usable sourced financial statements were obtained for this company.",
@@ -108,7 +142,7 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
                 "financial_data")
         debt = by_agent.get("debt_liquidity")
         if objective in {"investment_decision", "financial_research"} and (
-            debt is None or debt.status not in {"completed", "partial"} or not debt.evidence
+            debt is None or debt.status not in {"completed", "partial"} or not eligible_evidence[debt.agent_id]
         ):
             gap("liquidity", "medium",
                 "Debt and liquidity have not been established from dated financial records.",
@@ -138,19 +172,19 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
             "News headlines are not verified full articles or primary disclosures.",
             "Verify material claims using primary sources before relying on catalysts.")
     if objective == "positioning_research" and not any(
-        r.evidence for r in results if r.agent_id in {"cot", "crypto_derivatives"}
+        eligible_evidence[r.agent_id] for r in results if r.agent_id in {"cot", "crypto_derivatives"}
     ):
         gap("positioning", "high",
             "No usable dated futures positioning observations were retrieved.",
             "Check the exact contract, report date and original CFTC or exchange records.",
             "cot" if request.asset_class.value != "crypto" else "crypto_derivatives")
-    if not any(r.evidence for r in results):
+    if not any(eligible_evidence.values()):
         gap("data_availability", "high",
             "The investigation contains no dated source records.",
             "Configure a relevant supported data source or supply verified records.")
 
     fundamental = next((r for r in results if r.agent_id in
-                        {"fundamental", "financial_performance"} and r.evidence), None)
+                        {"fundamental", "financial_performance"} and eligible_evidence[r.agent_id]), None)
     if fundamental and objective in {"investment_decision", "financial_research"}:
         fcf = fundamental.metrics.get("fcf_proxy_usd")
         growth = fundamental.metrics.get("annual_revenue_growth_pct")
@@ -175,7 +209,7 @@ def build_research_brief(request: ResearchRequest, results: list[AgentResult],
         objective=objective,
         evidence_points=points,
         open_questions=gaps[:8],
-        assessment=("insufficient_evidence" if not any(r.evidence for r in results)
+        assessment=("insufficient_evidence" if not any(eligible_evidence.values())
                     else "descriptive_only"),
         method="deterministic, original-source linked and question-specific",
     )
