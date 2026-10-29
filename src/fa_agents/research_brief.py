@@ -32,8 +32,8 @@ def _objective(question: str) -> str:
     if words & {"cot", "funding", "derivados", "derivatives", "positioning",
                 "posicionamento", "futuros"}:
         return "positioning_research"
-    if words & {"balanco", "divida", "liquidez", "financeiro", "financial",
-                "fundamental", "receitas", "revenue", "lucro", "lucros",
+    if words & {"balanco", "divida", "liquidez", "financeiro", "financeira", "financas", "financial",
+                "fundamental", "receitas", "receita", "resultados", "revenue", "lucro", "lucros",
                 "debt", "margin", "margem"}:
         return "financial_research"
     return "general_research"
