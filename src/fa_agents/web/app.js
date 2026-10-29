@@ -218,6 +218,29 @@ if(critical){
   }
   parent.appendChild(box);
 }
+const brief=state.report.research_brief;
+if(brief){
+  if(brief.evidence_points?.length){
+    title(parent,"Dated source records");
+    const rows=brief.evidence_points.slice(0,8).map(p=>[
+      p.agent_id,p.metric,p.period,fmt(p.value)+" "+p.unit,p.source_id
+    ]);
+    parent.appendChild(table(["Specialist","Metric","Period","Observed value","Source ID"],rows));
+    paragraph(parent,"Observations are linked to the cited source IDs. They are not an investment recommendation.");
+  }
+  if(brief.open_questions?.length){
+    const gaps=section("Next checks · "+brief.objective.replaceAll("_"," "));
+    const list=el("ul");
+    brief.open_questions.slice(0,6).forEach(gap=>{
+      const li=el("li");
+      li.appendChild(el("strong","",gap.priority.toUpperCase()+" · "+gap.category.replaceAll("_"," ")));
+      li.appendChild(el("span","", " — "+gap.next_action));
+      list.appendChild(li);
+    });
+    gaps.appendChild(list);
+    parent.appendChild(gaps);
+  }
+}
 if(state.report.llm_commentary){title(parent,"AI evidence commentary");const b=el("section","report-lead");paragraph(b,state.report.llm_commentary,"");parent.appendChild(b)}title(parent,"Research coverage");const counts={completed:0,partial:0,no_data:0,failed:0,not_implemented:0};agents().forEach(x=>counts[x.status]=(counts[x.status]||0)+1);const grid=el("div","kpi-grid");append(grid,valueRow("Completed",counts.completed),valueRow("Partial",counts.partial),valueRow("Unavailable",counts.no_data+counts.failed+counts.not_implemented),valueRow("Source records",sources().length));parent.appendChild(grid);const metrics=agent("financial_performance")?.metrics||agent("fundamental")?.metrics||agent("financial_data")?.metrics;if(metrics){title(parent,"Key financial metrics");const g=el("div","kpi-grid");["revenue_usd","annual_revenue_growth_pct","net_margin_pct","fcf_proxy_usd"].forEach(k=>{if(metrics[k]!==undefined)g.appendChild(valueRow(k,metrics[k]))});if(g.childElementCount)parent.appendChild(g)}title(parent,"Specialist outcomes");parent.appendChild(table(["Specialist","Status","Summary"],agents().map(x=>[x.agent_id,x.status,x.summary||x.limitations?.[0]||"—"])));if(state.report.warnings?.length){title(parent,"Warnings");const box=section("Coverage limits"),ul=el("ul");state.report.warnings.forEach(x=>ul.appendChild(el("li","",x)));box.appendChild(ul);parent.appendChild(box)}}
 function compact(v){const abs=Math.abs(v);if(abs>=1e9)return(v/1e9).toFixed(1)+"B";if(abs>=1e6)return(v/1e6).toFixed(1)+"M";if(abs>=1e3)return(v/1e3).toFixed(1)+"K";return v.toFixed(1)}
 function drawLineChart(points){const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 700 250");svg.setAttribute("class","chart");svg.setAttribute("role","img");svg.setAttribute("aria-label","Numeric time series");const values=points.map(p=>Number(p.y));if(!points.length||values.some(x=>!Number.isFinite(x)))return el("div","empty-chart","No numeric history");const L=78,R=678,T=22,B=207;let lo=Math.min(...values),hi=Math.max(...values);if(lo===hi){lo-=Math.max(1,Math.abs(lo)*.1);hi+=Math.max(1,Math.abs(hi)*.1)}const pad=(hi-lo)*.08;lo-=pad;hi+=pad;const X=i=>L+(points.length===1?.5:i/(points.length-1))*(R-L),Y=v=>B-(v-lo)/(hi-lo)*(B-T);const line=(a,b,c,d)=>{const n=document.createElementNS(NS,"line");Object.entries({x1:a,y1:b,x2:c,y2:d}).forEach(([key,v])=>n.setAttribute(key,String(v)));svg.appendChild(n)};const text=(x,y,s,anchor="start")=>{const n=document.createElementNS(NS,"text");n.setAttribute("x",x);n.setAttribute("y",y);n.setAttribute("text-anchor",anchor);n.textContent=s;svg.appendChild(n)};for(let i=0;i<=4;i++){const y=T+i*(B-T)/4;line(L,y,R,y);text(L-9,y+3,compact(hi-i*(hi-lo)/4),"end")}text(L,B+24,points[0].x);if(points.length>1)text(R,B+24,points[points.length-1].x,"end");const poly=document.createElementNS(NS,"polyline");poly.setAttribute("points",points.map((p,i)=>X(i).toFixed(1)+","+Y(Number(p.y)).toFixed(1)).join(" "));svg.appendChild(poly);if(points.length<=24)points.forEach((p,i)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",X(i));c.setAttribute("cy",Y(Number(p.y)));c.setAttribute("r",3.5);c.setAttribute("fill","#a8d6ff");svg.appendChild(c)});return svg}
