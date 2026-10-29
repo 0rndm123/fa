@@ -58,13 +58,11 @@
             </div>
           </div>
           <label class="checkline voice-reply-optin"><input type="checkbox" id="autoSpeak" disabled><span>Read answers aloud automatically (AI-generated voice; uses OpenAI API)</span></label>
-          <section id="voiceConversationPanel" class="fa-voice-session hidden" aria-label="Conversação por voz">
-            <div class="fa-voice-session-top"><span id="voiceConversationStatus" class="fa-voice-session-status" role="status" aria-live="polite">Preparado para conversar</span>
-              <button id="voiceStop" class="fa-voice-close" type="button" aria-label="Terminar conversa por voz" title="Terminar e desligar microfone">×</button>
-            </div>
-            <div class="fa-wave-large" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <div class="fa-voice-session-bottom"><span>Conversa por turnos · microfone e voz</span><label class="checkline"><input type="checkbox" id="voiceAuto" checked><span>Continuar após a resposta</span></label></div>
-          </section>
+          <div class="voice-turn-controls hidden" id="voiceTurnControls">
+            <span id="voiceConversationStatus" class="subtle small" role="status" aria-live="polite">Conversa por voz pronta</span>
+            <button type="button" id="voiceStop" class="voice-stop" disabled>Terminar conversa</button>
+            <label class="checkline"><input type="checkbox" id="voiceAuto" checked><span>Continuar por voz</span></label>
+          </div>
           <span id="voiceStatus" class="subtle small" role="status" aria-live="polite">Record a question, review the transcription, then send. Audio is sent to OpenAI only for transcription.</span>
           <span class="subtle small">Enter to send · Shift+Enter for a new line</span>
         </form>
