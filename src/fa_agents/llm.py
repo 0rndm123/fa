@@ -28,6 +28,17 @@ def explain(report: ResearchReport, model: str | None = None,
         "recent_conversation": history[-8:] if history else [],
         "symbol": report.request.symbol,
         "statuses": {r.agent_id: r.status for r in report.results},
+        "critical_findings": ([f.model_dump(mode="json") for f in
+            report.critical_review.findings[:8]] if report.critical_review else []),
+        "unresolved_checks": ([{
+            "category": gap.category,
+            "priority": gap.priority,
+            "reason": gap.reason,
+            "next_action": gap.next_action,
+        } for gap in report.research_brief.open_questions[:6]]
+            if report.research_brief else []),
+        "source_linked_observations": ([point.model_dump(mode="json") for point in
+            report.research_brief.evidence_points[:8]] if report.research_brief else []),
         "records": [{
             "specialist": r.agent_id, "metrics": r.metrics, "claims": r.claims,
             "limitations": r.limitations,
@@ -42,6 +53,9 @@ def explain(report: ResearchReport, model: str | None = None,
         "observations and material gaps; distinguish filings metadata and news headlines "
         "from full-text analysis. Cite source IDs with claims. Never invent facts, article "
         "contents, price targets, forecasts, probabilities or a trading recommendation. "
+        "Use unresolved_checks and critical_findings to challenge conclusions; these "
+        "are audit flags, not proven counterarguments. Never treat the status "
+        "clear as a guarantee or use linked records to infer unreported prices. "
         "Say explicitly where the evidence is insufficient."
     )
     message = json.dumps(limited, ensure_ascii=False)[:22000]
