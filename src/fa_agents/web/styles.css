@@ -94,3 +94,12 @@
 .voice-turn-controls{padding:7px 9px;border:1px solid #365273;background:#1b3046;border-radius:9px;gap:10px}
 .voice-turn-controls #voiceConversationStatus{flex:1;min-width:90px}
 @media(prefers-reduced-motion:reduce){.fa-conversation.active .fa-wave-mini i{animation:none}}
+
+.fa-login-overlay{position:fixed;inset:0;z-index:999;background:#0c1726;display:grid;place-items:center;padding:20px}
+.fa-login-overlay[hidden],.app[hidden]{display:none!important}
+.fa-login-card{max-width:390px;width:100%;background:#16283a;border:1px solid #39516d;border-radius:15px;padding:28px;display:grid;gap:14px;color:#eef5ff}
+.fa-login-card h1{margin:0}.fa-login-card p{margin:0;color:#b6c7d9}
+.fa-login-card label{display:grid;gap:5px;font-size:13px}
+.fa-login-card input{border-radius:8px;padding:10px;color:#f4f8ff;background:#0d1e2d;border:1px solid #4c657e}
+.fa-login-card button{padding:11px;border-radius:9px;background:#2f73d9;color:white;cursor:pointer}
+#faAuthError{color:#ffb9b9}

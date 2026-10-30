@@ -49,8 +49,40 @@ async def local_only(request: Request, call_next):
     if client not in {"127.0.0.1", "::1", "testclient"}:
         return JSONResponse(status_code=403, content={"detail": "Localhost access only."})
 
-    if os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() not in {"", "cloudflare_access"}:
+    if os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() not in {"", "cloudflare_access", "supabase"}:
         return JSONResponse(status_code=503, content={"detail": "Unsupported remote auth mode."})
+
+    if os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() == "supabase":
+        from .supabase_auth import AccessDenied, verify_access, settings
+        from urllib.parse import urlsplit
+        # The login shell and its own Javascript are the only public assets.
+        public = request.url.path == "/" or request.url.path.startswith("/static/") or request.url.path == "/api/auth/config"
+        if request.url.path == "/api/auth/config":
+            try:
+                url, key = settings()
+            except AccessDenied:
+                return JSONResponse(status_code=503, content={"detail": "Auth configuration missing."})
+            return JSONResponse(content={"enabled": True, "supabase_url": url, "publishable_key": key})
+        if public and request.method in {"GET", "HEAD"}:
+            return await call_next(request)
+        header = request.headers.get("Authorization", "")
+        if not header.startswith("Bearer "):
+            return JSONResponse(status_code=401, content={"detail": "Sign in required."})
+        try:
+            principal = await verify_access(header[7:])
+        except AccessDenied:
+            return JSONResponse(status_code=403, content={"detail": "Invalid session or FA_Agent permission."})
+        request.state.fa_principal = principal
+        if (request.url.path.startswith("/api/admin/") or (request.url.path == "/api/model-settings" and request.method != "GET")) and principal["role"] != "admin":
+            return JSONResponse(status_code=403, content={"detail": "Admin permission required."})
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            origin = request.headers.get("origin")
+            if origin:
+                parsed = urlsplit(origin)
+                host = request.headers.get("host", "").lower()
+                if parsed.scheme not in {"https", "http"} or parsed.netloc.lower() != host:
+                    return JSONResponse(status_code=403, content={"detail": "Origin not allowed."})
+        return await call_next(request)
 
     if cloudflare_access.remote_mode():
         try:
@@ -110,6 +142,23 @@ class AnalyzeInput(BaseModel):
     @classmethod
     def upper_symbol(cls, value: str) -> str:
         return value.strip().upper()
+
+
+@app.get("/api/auth/config")
+def auth_public_config():
+    if os.getenv("FA_REMOTE_AUTH_MODE", "").lower() != "supabase":
+        return {"enabled": False}
+    from .supabase_auth import settings, AccessDenied
+    try:
+        url, key = settings()
+    except AccessDenied:
+        raise HTTPException(status_code=503, detail="Supabase configuration unavailable.")
+    return {"enabled": True, "supabase_url": url, "publishable_key": key}
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request):
+    return request.state.fa_principal
 
 
 @app.get("/")
