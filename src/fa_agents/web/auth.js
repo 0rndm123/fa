@@ -2,7 +2,7 @@
 (() => {
   const KEY="fa_agent.supabase.session.v1";
   const nativeFetch=window.fetch.bind(window);
-  let config=null, session=null,refreshPromise=null;
+  let config=null, session=null,refreshPromise=null, authEnabled=false;
   try {session=JSON.parse(sessionStorage.getItem(KEY)||"null")}catch{session=null}
   const save=s=>{session=s;if(s)sessionStorage.setItem(KEY,JSON.stringify(s));else sessionStorage.removeItem(KEY)};
   async function authRequest(route,body){
@@ -25,7 +25,7 @@
   }
   window.fetch=async(input,opts={})=>{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url,location.href);
-    if(url.origin!==location.origin||!url.pathname.startsWith("/api/")||url.pathname==="/api/auth/config")
+    if(!authEnabled||url.origin!==location.origin||!url.pathname.startsWith("/api/")||url.pathname==="/api/auth/config")
       return nativeFetch(input,opts);
     const headers=new Headers(opts.headers||(input instanceof Request?input.headers:undefined));
     const jwt=await token();
@@ -80,6 +80,8 @@
       const r=await nativeFetch("/api/auth/config");
       if(!r.ok)throw Error("Remote authentication is not configured.");
       config=await r.json();
+      authEnabled=Boolean(config.enabled);
+      if(!authEnabled){hideGate();return}
       await check();
     }catch{showGate("Supabase authentication is not configured or unavailable.")}
   });
