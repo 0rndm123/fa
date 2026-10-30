@@ -62,7 +62,7 @@ async def local_only(request: Request, call_next):
                 url, key = settings()
             except AccessDenied:
                 return JSONResponse(status_code=503, content={"detail": "Auth configuration missing."})
-            return JSONResponse(content={"supabase_url": url, "publishable_key": key})
+            return JSONResponse(content={"enabled": True, "supabase_url": url, "publishable_key": key})
         if public and request.method in {"GET", "HEAD"}:
             return await call_next(request)
         header = request.headers.get("Authorization", "")
