@@ -7,11 +7,22 @@
   <title>FA Agent | Research Workbench</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/interactive_chart.js" defer></script>
+  <script src="/static/auth.js" defer></script>
   <script src="/static/app.js" defer></script>
   <script src="/static/model-settings.js" defer></script>
   <script src="/static/voice-turns.js" defer></script>
 </head>
 <body>
+<div id="faLoginGate" class="fa-login-overlay" hidden>
+  <form id="faLoginForm" class="fa-login-card">
+    <h1>FA_Agent</h1>
+    <p>Supabase login</p>
+    <label>Email <input type="email" id="faEmail" required></label>
+    <label>Password <input type="password" id="faPassword" required></label>
+    <p id="faAuthError"></p>
+    <button type="submit">Sign in</button>
+  </form>
+</div>
 <div class="app">
   <header class="topbar">
     <div class="brand"><div class="brand-mark">FA</div><div><strong>FA Agent</strong><small>Financial Research Workbench</small></div></div>
