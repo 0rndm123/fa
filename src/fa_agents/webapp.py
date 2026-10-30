@@ -56,8 +56,7 @@ async def local_only(request: Request, call_next):
         from .supabase_auth import AccessDenied, verify_access, settings
         from urllib.parse import urlsplit
         # The login shell and its own Javascript are the only public assets.
-        public = request.url.path in {"/", "/static/auth.js", "/static/auth.css",
-                                      "/api/auth/config"}
+        public = request.url.path == "/" or request.url.path.startswith("/static/") or request.url.path == "/api/auth/config"
         if request.url.path == "/api/auth/config":
             try:
                 url, key = settings()
