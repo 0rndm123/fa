@@ -144,6 +144,18 @@ class AnalyzeInput(BaseModel):
         return value.strip().upper()
 
 
+@app.get("/api/auth/config")
+def auth_public_config():
+    if os.getenv("FA_REMOTE_AUTH_MODE", "").lower() != "supabase":
+        return {"enabled": False}
+    from .supabase_auth import settings, AccessDenied
+    try:
+        url, key = settings()
+    except AccessDenied:
+        raise HTTPException(status_code=503, detail="Supabase configuration unavailable.")
+    return {"enabled": True, "supabase_url": url, "publishable_key": key}
+
+
 @app.get("/api/auth/me")
 def auth_me(request: Request):
     return request.state.fa_principal
