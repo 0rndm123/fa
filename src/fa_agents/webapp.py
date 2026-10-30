@@ -73,7 +73,7 @@ async def local_only(request: Request, call_next):
         except AccessDenied:
             return JSONResponse(status_code=403, content={"detail": "Invalid session or FA_Agent permission."})
         request.state.fa_principal = principal
-        if request.url.path.startswith("/api/admin/") and principal["role"] != "admin":
+        if (request.url.path.startswith("/api/admin/") or (request.url.path == "/api/model-settings" and request.method != "GET")) and principal["role"] != "admin":
             return JSONResponse(status_code=403, content={"detail": "Admin permission required."})
         if request.method not in {"GET", "HEAD", "OPTIONS"}:
             origin = request.headers.get("origin")
