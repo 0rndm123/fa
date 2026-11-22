@@ -15,6 +15,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
+from .project_backlog import read_project_backlog
 from pydantic import BaseModel, Field, field_validator
 
 from .agents import Services
@@ -164,6 +165,13 @@ def auth_me(request: Request):
 @app.get("/")
 def index():
     return FileResponse(WEB_DIR / "index.html")
+
+
+@app.get("/api/project-backlog")
+def project_backlog(request: Request):
+    """Read-only progress visible only after the existing project auth middleware."""
+    # The middleware validates Supabase/Cloudflare Access in remote mode.
+    return read_project_backlog(Path(__file__).resolve().parents[2], project="FA Agent")
 
 
 @app.get("/api/capabilities")
