@@ -103,3 +103,11 @@
 .fa-login-card input{border-radius:8px;padding:10px;color:#f4f8ff;background:#0d1e2d;border:1px solid #4c657e}
 .fa-login-card button{padding:11px;border-radius:9px;background:#2f73d9;color:white;cursor:pointer}
 #faAuthError{color:#ffb9b9}
+
+/* Backlog is a third workspace view; research controls remain mounted. */
+.results-pane.backlog-open>.results-head,
+.results-pane.backlog-open>#warning,
+.results-pane.backlog-open>#busy,
+.results-pane.backlog-open>#emptyState,
+.results-pane.backlog-open>#reportArea{display:none!important}
+#projectBacklogPane{max-width:1160px;margin:0 auto;padding:2px 0 24px}
