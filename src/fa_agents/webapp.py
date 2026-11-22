@@ -169,8 +169,11 @@ def index():
 
 @app.get("/api/project-backlog")
 def project_backlog(request: Request):
-    """Read-only progress visible only after the existing project auth middleware."""
-    # The middleware validates Supabase/Cloudflare Access in remote mode.
+    """Do not expose private roadmap or Git history via remote tunnels."""
+    if (request.url.hostname not in {"localhost", "127.0.0.1", "::1", "testserver"} or
+        os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() not in {"", "local"} or
+        any(h in request.headers for h in ("cf-ray", "cf-connecting-ip", "x-forwarded-host"))):
+        raise HTTPException(403, "Project backlog is available locally only.")
     return read_project_backlog(Path(__file__).resolve().parents[2], project="FA Agent")
 
 
