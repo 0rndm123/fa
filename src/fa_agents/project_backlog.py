@@ -38,16 +38,21 @@ def read_project_backlog(repo_root: Path, *, project: str, max_commits: int = 18
             payload = json.loads(manifest.read_text(encoding="utf-8"))
             if not isinstance(payload, dict) or not isinstance(payload.get("items", []), list):
                 raise ValueError("Expected object with items array")
-            result["items"] = [
-                {k: item.get(k) for k in
-                 ("id", "title", "description", "status", "priority", "source", "updated_at", "evidence")
-                 if k in item}
-                for item in payload.get("items", [])[:250]
-                if isinstance(item, dict) and
-                item.get("status") in _ALLOWED and
-                isinstance(item.get("title"), str) and
-                isinstance(item.get("id"), str)
-            ]
+            for item in payload.get("items", [])[:250]:
+                if (not isinstance(item, dict) or item.get("status") not in _ALLOWED or
+                        not isinstance(item.get("title"), str) or
+                        not isinstance(item.get("id"), str)):
+                    continue
+                row = {k: item.get(k) for k in
+                       ("id", "title", "description", "status", "priority", "source",
+                        "updated_at", "evidence") if k in item}
+                if row["status"] == "done" and not str(row.get("evidence") or "").strip():
+                    # A status change without verification is NOT a completed task.
+                    row["status"] = "todo"
+                    result["warnings"].append(
+                        "Item " + row["id"][:64] + " lacks completion evidence; shown as To do."
+                    )
+                result["items"].append(row)
             result["manifest_version"] = payload.get("version", 1)
         except (OSError, ValueError, UnicodeError) as exc:
             result["warnings"].append("Backlog manifest unreadable: " + type(exc).__name__)
