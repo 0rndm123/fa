@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "project": "fa",
+  "guidance": "Only explicitly registered requests appear as backlog items. Git commits appear separately as recent code changes; neither implies local deployment or user approval.",
+  "items": [
+    {
+      "id": "FA-101",
+      "title": "Read filing text and validate evidence passages",
+      "description": "Extract management discussion and footnotes with traceable SEC source passages.",
+      "status": "todo",
+      "priority": "P1",
+      "source": "FA_Agent docs/roadmap.md",
+      "updated_at": "2026-11-22T19:50:00+00:00",
+      "evidence": "Pending verification; no completion evidence recorded."
+    },
+    {
+      "id": "FA-102",
+      "title": "Develop independent challenger and scenario analysis",
+      "description": "Ensure contradictions, risks and confidence are supported by actual external evidence.",
+      "status": "todo",
+      "priority": "P2",
+      "source": "FA_Agent docs/roadmap.md",
+      "updated_at": "2026-11-22T19:50:00+00:00",
+      "evidence": "Pending verification; no completion evidence recorded."
+    },
+    {
+      "id": "FA-103",
+      "title": "Evaluate point-in-time thesis research without hindsight",
+      "description": "Separate historical information available at the decision date from later outcomes.",
+      "status": "todo",
+      "priority": "P2",
+      "source": "FA_Agent docs/roadmap.md",
+      "updated_at": "2026-11-22T19:50:00+00:00",
+      "evidence": "Pending verification; no completion evidence recorded."
+    }
+  ]
+}
