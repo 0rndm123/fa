@@ -175,7 +175,8 @@ def project_backlog(request: Request):
              request.client is not None and
              request.client.host in {"127.0.0.1", "::1", "testclient"} and
              not any(h in request.headers for h in
-                     ("cf-ray", "cf-connecting-ip", "x-forwarded-host", "x-forwarded-for")))
+                     ("cf-ray", "cf-connecting-ip", "x-forwarded-host", "x-forwarded-for",
+                      "x-forwarded-proto", "forwarded", "x-original-host")))
     if not local:
         raise HTTPException(403, "Project backlog is available locally only.")
     # In Supabase mode local users must still be authorized administrators.
