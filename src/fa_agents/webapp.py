@@ -170,10 +170,21 @@ def index():
 @app.get("/api/project-backlog")
 def project_backlog(request: Request):
     """Do not expose private roadmap or Git history via remote tunnels."""
-    if (request.url.hostname not in {"localhost", "127.0.0.1", "::1", "testserver"} or
-        os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower() not in {"", "local"} or
-        any(h in request.headers for h in ("cf-ray", "cf-connecting-ip", "x-forwarded-host"))):
+    auth_mode = os.getenv("FA_REMOTE_AUTH_MODE", "").strip().lower()
+    local = (request.url.hostname in {"localhost", "127.0.0.1", "::1", "testserver"} and
+             request.client is not None and
+             request.client.host in {"127.0.0.1", "::1", "testclient"} and
+             not any(h in request.headers for h in
+                     ("cf-ray", "cf-connecting-ip", "x-forwarded-host", "x-forwarded-for")))
+    if not local:
         raise HTTPException(403, "Project backlog is available locally only.")
+    # In Supabase mode local users must still be authorized administrators.
+    if auth_mode == "supabase":
+        principal = getattr(request.state, "fa_principal", None) or {}
+        if principal.get("role") != "admin":
+            raise HTTPException(403, "Administrator access required.")
+    elif auth_mode not in {"", "local"}:
+        raise HTTPException(403, "Project backlog disabled in remote mode.")
     return read_project_backlog(Path(__file__).resolve().parents[2], project="FA Agent")
 
 
