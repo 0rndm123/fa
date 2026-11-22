@@ -38,6 +38,23 @@ class ProjectBacklogTests(unittest.TestCase):
             self.assertNotIn("completed",data["items"][0])
             self.assertEqual(data["commits"],[])
 
+    def test_completion_requires_evidence(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);(root/"docs").mkdir()
+            payload={"version":1,"items":[
+                {"id":"NOT-PROVEN","title":"Unverified delivery","status":"done"},
+                {"id":"PROVEN","title":"Verified delivery","status":"done",
+                 "evidence":"Commit abcdef1 + accepted Windows QA"},
+            ]}
+            (root/"docs"/"project_backlog.json").write_text(
+                json.dumps(payload), encoding="utf-8"
+            )
+            data=load_reader()(root,project="Example")
+            statuses={item["id"]:item["status"] for item in data["items"]}
+            self.assertEqual(statuses["NOT-PROVEN"],"todo")
+            self.assertEqual(statuses["PROVEN"],"done")
+            self.assertTrue(any("lacks completion evidence" in w for w in data["warnings"]))
+
     def test_invalid_manifest_is_reported_not_silently_accepted(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td);(root/"docs").mkdir()
