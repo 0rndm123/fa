@@ -42,15 +42,28 @@
     for(const [v,t] of choices){const option=element("option",t);option.value=v;option.selected=v===value;select.appendChild(option)}
     item.appendChild(select);return item;
   }
-  function openSettings(open) {
-    $("resultsPane").classList.toggle("settings-open", open);
-    $("modelSettingsPane").classList.toggle("hidden", !open);
-    $("modelsViewTab").setAttribute("aria-selected", String(open));
-    $("researchViewTab").setAttribute("aria-selected", String(!open));
-    if(open&&!initialized) void refresh();
+  let backlogLoaded=false;
+  function switchWorkspace(view) {
+    const models=view==="models",backlog=view==="backlog";
+    $("resultsPane").classList.toggle("settings-open",models);
+    $("resultsPane").classList.toggle("backlog-open",backlog);
+    $("modelSettingsPane").classList.toggle("hidden",!models);
+    $("projectBacklogPane").classList.toggle("hidden",!backlog);
+    $("modelsViewTab").setAttribute("aria-selected",String(models));
+    $("researchViewTab").setAttribute("aria-selected",String(view==="research"));
+    $("backlogViewTab").setAttribute("aria-selected",String(backlog));
+    if(models&&!initialized)void refresh();
+    if(backlog&&!backlogLoaded){
+      backlogLoaded=true;
+      window.ProjectBacklog.mount($("faBacklog"),{
+        endpoint:"/api/project-backlog",
+        repositoryUrl:"https://github.com/0rndm123/fa"
+      });
+    }
   }
-  $("modelsViewTab").onclick=()=>openSettings(true);
-  $("researchViewTab").onclick=()=>openSettings(false);
+  $("modelsViewTab").onclick=()=>switchWorkspace("models");
+  $("researchViewTab").onclick=()=>switchWorkspace("research");
+  $("backlogViewTab").onclick=()=>switchWorkspace("backlog");
   function render() {
     initialized=true;
     body.replaceChildren();
