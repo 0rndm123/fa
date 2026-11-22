@@ -43,6 +43,8 @@
     item.appendChild(select);return item;
   }
   let backlogLoaded=false;
+  const localDevelopment=['localhost','127.0.0.1','::1'].includes(window.location.hostname);
+  $("backlogViewTab").hidden=!localDevelopment;
   function switchWorkspace(view) {
     const models=view==="models",backlog=view==="backlog";
     $("resultsPane").classList.toggle("settings-open",models);
